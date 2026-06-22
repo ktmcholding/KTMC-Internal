@@ -1,39 +1,47 @@
 import { useRef, useState, type DragEvent } from "react";
-import { FileText, Trash2, UploadCloud } from "lucide-react";
+import { FileText, Trash2, UploadCloud, Loader2 } from "lucide-react";
 import type { ClientDocument } from "../types";
-import { formatBytes, formatDate, uid } from "../lib/format";
+import { formatBytes, formatDate } from "../lib/format";
 
 interface DocumentDropzoneProps {
   documents: ClientDocument[];
-  onAdd: (docs: ClientDocument[]) => void;
+  /** Called with the selected/dropped files. May be async (uploads). */
+  onAdd: (files: File[]) => void | Promise<void>;
   onRemove?: (id: string) => void;
+  /** Open/download a stored document (e.g. via a signed URL). */
+  onOpen?: (doc: ClientDocument) => void;
 }
 
 /**
  * Drag-and-drop (or click) area for uploading multiple client documents.
- * Files are recorded as metadata; wiring to real object storage (S3 / GCS)
- * is a backend concern handled at integration time.
+ * The parent decides what happens with the files — in backend mode they are
+ * uploaded to Supabase Storage; in demo mode their metadata is recorded.
  */
-export function DocumentDropzone({ documents, onAdd, onRemove }: DocumentDropzoneProps) {
+export function DocumentDropzone({
+  documents,
+  onAdd,
+  onRemove,
+  onOpen,
+}: DocumentDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  function handleFiles(fileList: FileList | null) {
+  async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
-    const docs: ClientDocument[] = Array.from(fileList).map((f) => ({
-      id: uid("doc"),
-      name: f.name,
-      size: f.size,
-      type: f.type || "application/octet-stream",
-      uploadedAt: new Date().toISOString().slice(0, 10),
-    }));
-    onAdd(docs);
+    const files = Array.from(fileList);
+    setBusy(true);
+    try {
+      await onAdd(files);
+    } finally {
+      setBusy(false);
+    }
   }
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragging(false);
-    handleFiles(e.dataTransfer.files);
+    void handleFiles(e.dataTransfer.files);
   }
 
   return (
@@ -41,9 +49,9 @@ export function DocumentDropzone({ documents, onAdd, onRemove }: DocumentDropzon
       <div
         role="button"
         tabIndex={0}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !busy && inputRef.current?.click()}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
+          if ((e.key === "Enter" || e.key === " ") && !busy) inputRef.current?.click();
         }}
         onDragOver={(e) => {
           e.preventDefault();
@@ -55,11 +63,15 @@ export function DocumentDropzone({ documents, onAdd, onRemove }: DocumentDropzon
           dragging
             ? "border-brand-500 bg-brand-50"
             : "border-gray-300 bg-gray-50 hover:border-brand-400 hover:bg-brand-50/40"
-        }`}
+        } ${busy ? "pointer-events-none opacity-60" : ""}`}
       >
-        <UploadCloud className="mb-2 text-brand-500" size={28} />
+        {busy ? (
+          <Loader2 className="mb-2 animate-spin text-brand-500" size={28} />
+        ) : (
+          <UploadCloud className="mb-2 text-brand-500" size={28} />
+        )}
         <p className="text-sm font-medium text-gray-700">
-          Drop documents here, or click to browse
+          {busy ? "Uploading…" : "Drop documents here, or click to browse"}
         </p>
         <p className="mt-1 text-xs text-gray-500">
           Upload multiple files — contracts, briefs, specs, etc.
@@ -70,7 +82,7 @@ export function DocumentDropzone({ documents, onAdd, onRemove }: DocumentDropzon
           multiple
           className="hidden"
           onChange={(e) => {
-            handleFiles(e.target.files);
+            void handleFiles(e.target.files);
             e.target.value = "";
           }}
         />
@@ -80,10 +92,21 @@ export function DocumentDropzone({ documents, onAdd, onRemove }: DocumentDropzon
         <ul className="mt-3 divide-y divide-gray-100 rounded-lg border border-gray-200">
           {documents.map((d) => (
             <li key={d.id} className="flex items-center justify-between px-3 py-2">
-              <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                className="flex min-w-0 items-center gap-2 text-left"
+                onClick={() => onOpen?.(d)}
+                disabled={!onOpen}
+              >
                 <FileText size={16} className="shrink-0 text-gray-400" />
-                <span className="truncate text-sm text-gray-700">{d.name}</span>
-              </div>
+                <span
+                  className={`truncate text-sm ${
+                    onOpen ? "text-brand-700 hover:underline" : "text-gray-700"
+                  }`}
+                >
+                  {d.name}
+                </span>
+              </button>
               <div className="flex items-center gap-3 pl-3">
                 <span className="whitespace-nowrap text-xs text-gray-400">
                   {formatBytes(d.size)} · {formatDate(d.uploadedAt)}

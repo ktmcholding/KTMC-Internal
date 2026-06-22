@@ -75,6 +75,8 @@ export interface ClientDocument {
   size: number; // bytes
   type: string; // mime type
   uploadedAt: string; // ISO date
+  /** Storage object path (Supabase Storage). Absent in demo mode. */
+  path?: string;
 }
 
 export interface Client {

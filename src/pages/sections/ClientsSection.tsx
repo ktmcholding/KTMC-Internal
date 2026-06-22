@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Plus, Trash2, ChevronRight, ChevronDown } from "lucide-react";
-import type { CategoryId, Client } from "../../types";
+import type { CategoryId, Client, ClientDocument } from "../../types";
 import { useStore } from "../../store/AppStore";
 import { StatCard } from "../../components/StatCard";
 import { Modal } from "../../components/Modal";
 import { DocumentDropzone } from "../../components/DocumentDropzone";
 import { formatCurrency, formatDate, uid } from "../../lib/format";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { getDocumentUrl, uploadClientDocuments } from "../../lib/api";
 
 export function ClientsSection({ category }: { category: CategoryId }) {
   const { clientsByCategory, dispatch } = useStore();
@@ -107,19 +109,44 @@ export function ClientsSection({ category }: { category: CategoryId }) {
                           </h3>
                           <DocumentDropzone
                             documents={c.documents}
-                            onAdd={(docs) =>
+                            onAdd={async (files) => {
+                              let docs: ClientDocument[];
+                              if (isSupabaseConfigured) {
+                                docs = await uploadClientDocuments(c.id, files);
+                              } else {
+                                docs = files.map((f) => ({
+                                  id: uid("doc"),
+                                  name: f.name,
+                                  size: f.size,
+                                  type: f.type || "application/octet-stream",
+                                  uploadedAt: new Date()
+                                    .toISOString()
+                                    .slice(0, 10),
+                                }));
+                              }
                               dispatch({
                                 type: "ADD_CLIENT_DOCUMENTS",
                                 clientId: c.id,
                                 documents: docs,
-                              })
-                            }
-                            onRemove={(docId) =>
+                              });
+                            }}
+                            onRemove={(docId) => {
+                              const doc = c.documents.find((d) => d.id === docId);
                               dispatch({
                                 type: "DELETE_CLIENT_DOCUMENT",
                                 clientId: c.id,
                                 documentId: docId,
-                              })
+                                path: doc?.path,
+                              });
+                            }}
+                            onOpen={
+                              isSupabaseConfigured
+                                ? async (doc) => {
+                                    if (!doc.path) return;
+                                    const url = await getDocumentUrl(doc.path);
+                                    if (url) window.open(url, "_blank");
+                                  }
+                                : undefined
                             }
                           />
                         </div>

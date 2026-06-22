@@ -1,21 +1,41 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "../store/AuthStore";
 
 export function Login() {
-  const { login } = useAuth();
+  const { login, signUp, mode } = useAuth();
   const navigate = useNavigate();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const res = login(email, password);
-    if (res.ok) {
-      navigate("/", { replace: true });
-    } else {
-      setError(res.error ?? "Unable to sign in.");
+    setError(null);
+    setInfo(null);
+    setBusy(true);
+    try {
+      const res = isSignUp
+        ? await signUp(email, password)
+        : await login(email, password);
+      if (res.ok) {
+        if (res.needsConfirmation) {
+          setInfo(
+            "Account created. Check your email to confirm, then sign in."
+          );
+          setIsSignUp(false);
+        } else {
+          navigate("/", { replace: true });
+        }
+      } else {
+        setError(res.error ?? "Unable to continue.");
+      }
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -28,7 +48,9 @@ export function Login() {
           </div>
           <h1 className="text-xl font-semibold text-gray-900">KTMC Internal System</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Sign in to manage day-to-day operations
+            {isSignUp
+              ? "Create your account to get started"
+              : "Sign in to manage day-to-day operations"}
           </p>
         </div>
 
@@ -36,6 +58,11 @@ export function Login() {
           {error && (
             <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
+            </div>
+          )}
+          {info && (
+            <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {info}
             </div>
           )}
           <div>
@@ -59,19 +86,39 @@ export function Login() {
             <input
               id="password"
               type="password"
-              autoComplete="current-password"
+              autoComplete={isSignUp ? "new-password" : "current-password"}
               className="input"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button type="submit" className="btn-primary w-full">
-            Sign in
+          <button type="submit" className="btn-primary w-full" disabled={busy}>
+            {busy && <Loader2 size={16} className="animate-spin" />}
+            {isSignUp ? "Create account" : "Sign in"}
           </button>
-          <p className="text-center text-xs text-gray-400">
-            Demo build — enter any email and password to continue.
-          </p>
+
+          {mode === "supabase" ? (
+            <p className="text-center text-sm text-gray-500">
+              {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
+              <button
+                type="button"
+                className="font-medium text-brand-600 hover:text-brand-700"
+                onClick={() => {
+                  setIsSignUp((s) => !s);
+                  setError(null);
+                  setInfo(null);
+                }}
+              >
+                {isSignUp ? "Sign in" : "Create one"}
+              </button>
+            </p>
+          ) : (
+            <p className="text-center text-xs text-gray-400">
+              Demo mode — enter any email and password to continue. Connect Supabase
+              to enable real accounts.
+            </p>
+          )}
         </form>
       </div>
     </div>

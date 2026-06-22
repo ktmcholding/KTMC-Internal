@@ -1,53 +1,27 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useReducer,
+  useState,
   type ReactNode,
 } from "react";
-import type {
-  AppState,
-  CategoryId,
-  Client,
-  ClientDocument,
-  Invoice,
-  Lead,
-  SaleRecord,
-  Task,
-  CalendarEvent,
-  QuoIntegrationConfig,
-  CuratorIntegrationConfig,
-} from "../types";
-import { seedState } from "../data/seed";
+import type { AppState, CategoryId, Client, Invoice, Lead } from "../types";
+import type { Action } from "./actions";
+import { emptyState, seedState } from "../data/seed";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { fetchAll, persist } from "../lib/api";
+import { useAuth } from "./AuthStore";
 
 const STORAGE_KEY = "ktmc-internal-state-v1";
 
-type Action =
-  | { type: "ADD_SALE"; sale: SaleRecord }
-  | { type: "DELETE_SALE"; id: string }
-  | { type: "ADD_LEAD"; lead: Lead }
-  | { type: "UPDATE_LEAD"; lead: Lead }
-  | { type: "DELETE_LEAD"; id: string }
-  | { type: "ADD_INVOICE"; invoice: Invoice }
-  | { type: "UPDATE_INVOICE"; invoice: Invoice }
-  | { type: "DELETE_INVOICE"; id: string }
-  | { type: "ADD_CLIENT"; client: Client }
-  | { type: "UPDATE_CLIENT"; client: Client }
-  | { type: "DELETE_CLIENT"; id: string }
-  | { type: "ADD_CLIENT_DOCUMENTS"; clientId: string; documents: ClientDocument[] }
-  | { type: "DELETE_CLIENT_DOCUMENT"; clientId: string; documentId: string }
-  | { type: "ADD_TASK"; task: Task }
-  | { type: "UPDATE_TASK"; task: Task }
-  | { type: "DELETE_TASK"; id: string }
-  | { type: "ADD_EVENT"; event: CalendarEvent }
-  | { type: "DELETE_EVENT"; id: string }
-  | { type: "SET_QUO"; config: QuoIntegrationConfig }
-  | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
-  | { type: "RESET" };
-
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case "HYDRATE":
+      return action.state;
+
     case "ADD_SALE":
       return { ...state, sales: [action.sale, ...state.sales] };
     case "DELETE_SALE":
@@ -137,6 +111,9 @@ function reducer(state: AppState, action: Action): AppState {
 }
 
 function init(): AppState {
+  // In Supabase mode we start empty and hydrate from the backend.
+  if (isSupabaseConfigured) return emptyState();
+  // Demo mode: restore from localStorage or fall back to seed data.
   if (typeof window === "undefined") return seedState;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -150,6 +127,10 @@ function init(): AppState {
 interface AppStoreContextValue {
   state: AppState;
   dispatch: React.Dispatch<Action>;
+  /** True while the initial backend load is in flight (Supabase mode). */
+  loading: boolean;
+  /** Last sync/persist error, if any. */
+  error: string | null;
   // Convenience selectors
   clientsByCategory: (c: CategoryId) => Client[];
   leadsByCategory: (c: CategoryId) => Lead[];
@@ -161,9 +142,14 @@ interface AppStoreContextValue {
 const AppStoreContext = createContext<AppStoreContextValue | null>(null);
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, init);
+  const [state, rawDispatch] = useReducer(reducer, undefined, init);
+  const [loading, setLoading] = useState<boolean>(isSupabaseConfigured);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
+  // Demo mode: persist the whole state to localStorage.
   useEffect(() => {
+    if (isSupabaseConfigured) return;
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
@@ -171,10 +157,52 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
+  // Supabase mode: load everything once the user is authenticated.
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    if (!user) {
+      rawDispatch({ type: "HYDRATE", state: emptyState() });
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    fetchAll()
+      .then((s) => {
+        if (!active) return;
+        rawDispatch({ type: "HYDRATE", state: s });
+        setError(null);
+      })
+      .catch((e) => {
+        if (!active) return;
+        console.error("Failed to load data from Supabase", e);
+        setError(
+          "Could not load data from the backend. Check your Supabase setup and that the migration has been run."
+        );
+      })
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  // Write-through dispatch: update local state immediately, then persist.
+  const dispatch = useCallback<React.Dispatch<Action>>((action) => {
+    rawDispatch(action);
+    if (isSupabaseConfigured && action.type !== "HYDRATE") {
+      persist(action).catch((e) => {
+        console.error("Failed to save change to the backend", action.type, e);
+        setError("A change could not be saved to the backend. Please retry.");
+      });
+    }
+  }, []);
+
   const value = useMemo<AppStoreContextValue>(
     () => ({
       state,
       dispatch,
+      loading,
+      error,
       clientsByCategory: (c) => state.clients.filter((x) => x.category === c),
       leadsByCategory: (c) => state.leads.filter((x) => x.category === c),
       invoicesByCategory: (c) => state.invoices.filter((x) => x.category === c),
@@ -182,7 +210,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       clientName: (id) =>
         state.clients.find((x) => x.id === id)?.company ?? "Unknown client",
     }),
-    [state]
+    [state, dispatch, loading, error]
   );
 
   return (

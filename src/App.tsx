@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "./store/AuthStore";
 import { Layout } from "./components/Layout";
 import { Login } from "./pages/Login";
@@ -10,9 +11,20 @@ import { Curator } from "./pages/Curator";
 import { QuoIntegration } from "./pages/QuoIntegration";
 import { type ReactNode } from "react";
 
+function FullScreenLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-400">
+      <Loader2 size={28} className="animate-spin" />
+    </div>
+  );
+}
+
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
+  if (loading) {
+    return <FullScreenLoader />;
+  }
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

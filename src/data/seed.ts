@@ -1,5 +1,36 @@
 import type { AppState } from "../types";
 
+/** Default integration config used by both demo and backend modes. */
+const defaultQuo: AppState["quo"] = {
+  connected: false,
+  phoneNumber: "",
+  websiteUrl: "",
+  apiKey: "",
+  defaultCategory: "formulation",
+  autoImport: true,
+  lastSyncedAt: null,
+};
+
+const defaultCurator: AppState["curator"] = {
+  connected: false,
+  workspaceUrl: "",
+  apiKey: "",
+};
+
+/** An empty workspace (used in Supabase mode before/without data). */
+export function emptyState(): AppState {
+  return {
+    clients: [],
+    sales: [],
+    leads: [],
+    invoices: [],
+    tasks: [],
+    events: [],
+    quo: { ...defaultQuo },
+    curator: { ...defaultCurator },
+  };
+}
+
 // Seed data so the app is immediately useful as a working foundation.
 // In production this would be replaced by a backend / database.
 export const seedState: AppState = {

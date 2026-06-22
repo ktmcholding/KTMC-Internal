@@ -1,0 +1,41 @@
+import type {
+  AppState,
+  CalendarEvent,
+  Client,
+  ClientDocument,
+  CuratorIntegrationConfig,
+  Invoice,
+  Lead,
+  QuoIntegrationConfig,
+  SaleRecord,
+  Task,
+} from "../types";
+
+export type Action =
+  | { type: "HYDRATE"; state: AppState }
+  | { type: "ADD_SALE"; sale: SaleRecord }
+  | { type: "DELETE_SALE"; id: string }
+  | { type: "ADD_LEAD"; lead: Lead }
+  | { type: "UPDATE_LEAD"; lead: Lead }
+  | { type: "DELETE_LEAD"; id: string }
+  | { type: "ADD_INVOICE"; invoice: Invoice }
+  | { type: "UPDATE_INVOICE"; invoice: Invoice }
+  | { type: "DELETE_INVOICE"; id: string }
+  | { type: "ADD_CLIENT"; client: Client }
+  | { type: "UPDATE_CLIENT"; client: Client }
+  | { type: "DELETE_CLIENT"; id: string }
+  | { type: "ADD_CLIENT_DOCUMENTS"; clientId: string; documents: ClientDocument[] }
+  | {
+      type: "DELETE_CLIENT_DOCUMENT";
+      clientId: string;
+      documentId: string;
+      path?: string;
+    }
+  | { type: "ADD_TASK"; task: Task }
+  | { type: "UPDATE_TASK"; task: Task }
+  | { type: "DELETE_TASK"; id: string }
+  | { type: "ADD_EVENT"; event: CalendarEvent }
+  | { type: "DELETE_EVENT"; id: string }
+  | { type: "SET_QUO"; config: QuoIntegrationConfig }
+  | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
+  | { type: "RESET" };

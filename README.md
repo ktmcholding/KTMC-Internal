@@ -12,11 +12,19 @@ current and potential revenue.
 - **Tailwind CSS** for styling
 - **React Router** for navigation
 - **Recharts** for revenue visuals
-- **localStorage** as the data store (seeded with sample data)
+- **Supabase** for authentication, the Postgres database, and document storage
 
-> This is the foundation/MVP build. All data currently lives in the browser
-> (`localStorage`) so the app runs with no backend. The data layer is isolated in
-> `src/store/AppStore.tsx`, so swapping in a real API/database later is contained.
+## Two run modes
+
+The app detects whether Supabase credentials are present and runs accordingly:
+
+| Mode | When | Auth | Data | Documents |
+|---|---|---|---|---|
+| **Backend** | `VITE_SUPABASE_*` env vars set | Real accounts (Supabase Auth) | Postgres (shared workspace) | Files in Supabase Storage |
+| **Demo** | No env vars | Any email/password | Browser `localStorage` (seeded) | Metadata only |
+
+Demo mode lets the app run instantly with no setup. Backend mode is what you
+deploy for real, multi-user use with durable data.
 
 ## Getting started
 
@@ -27,7 +35,34 @@ npm run build    # type-check + production build
 npm run preview  # preview the production build
 ```
 
-Sign in with **any** email and password (placeholder auth for the demo).
+Without a `.env` file the app runs in **demo mode** — sign in with any email and
+password.
+
+## Connecting Supabase (real auth, database & document storage)
+
+1. **Create a project** at [supabase.com](https://supabase.com) (free tier is fine).
+2. **Run the schema**: in the Supabase dashboard open **SQL Editor**, paste the
+   contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql),
+   and click **Run**. This creates all tables, security policies, and the
+   `client-documents` storage bucket.
+3. **Add credentials**: copy `.env.example` to `.env` and fill in the values from
+   **Project Settings → API**:
+   ```env
+   VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
+4. **Restart** `npm run dev`. The login screen now offers **Create account** —
+   make the first account, then invite teammates (they each sign up; everyone
+   shares the same workspace data).
+
+### Security model
+
+This is a **shared internal workspace**: any authenticated KTMC user can read and
+write all records (clients, leads, invoices, etc.), which matches a single
+company managing its own data. Row-level-security policies enforce that you must
+be signed in. Documents live in a **private** storage bucket and are served via
+short-lived signed URLs. If you later need per-user or per-role restrictions,
+tighten the policies in the migration.
 
 ## What's included
 
@@ -65,18 +100,18 @@ Monthly calendar for scheduling meetings, site visits and deadlines.
   "simulate inbound leads" action to demonstrate the flow.
 - **Curator** — connect KTMC Internal to your external Curator software workspace.
 
-## Integration notes (next steps for production)
+## External integration notes (QUO & Curator)
 
-The two external integrations are wired with real settings forms but need
-credentials/endpoints to go live:
+These two connect to outside services and still need credentials/endpoints from
+those vendors to go fully live:
 
-- **QUO**: receive inbound leads via webhook from your QUO account. The handler
-  should create a `Lead` (see `src/types.ts`) under the configured default category.
-- **Curator**: supply the Curator workspace URL + API key to enable data sync /
-  embedding.
-
-Authentication, file storage (currently metadata-only), and persistence should be
-moved server-side before production use.
+- **QUO**: the settings screen captures your phone number, website and API key.
+  To auto-create leads, point a QUO webhook at a small serverless function (e.g. a
+  Supabase Edge Function) that inserts a row into the `leads` table — the app
+  picks it up on next load/refresh. The "Simulate inbound leads" button
+  demonstrates the end result today.
+- **Curator**: supply the Curator workspace URL + API key to enable linking /
+  data sync.
 
 ## Project structure
 
@@ -85,8 +120,16 @@ src/
   components/     Reusable UI (layout, charts, modal, dropzone, badges)
   pages/          Top-level screens
     sections/     Category tab sections (Sales, Invoices, Leads, Clients)
-  store/          App + auth state (localStorage-backed)
-  data/seed.ts    Sample seed data
-  lib/format.ts   Categories + formatting helpers
+  store/          App + auth state
+    AuthStore.tsx   Supabase Auth (or demo) sessions
+    AppStore.tsx    Data state: hydrate from backend + write-through, or demo
+    actions.ts      Shared action types
+  lib/
+    supabase.ts     Supabase client + config detection
+    api.ts          Backend data access, persistence & document storage
+    format.ts       Categories + formatting helpers
+  data/seed.ts    Sample seed data (demo) + empty workspace shape
   types.ts        Domain types
+supabase/
+  migrations/0001_init.sql   Database schema, RLS policies, storage bucket
 ```
