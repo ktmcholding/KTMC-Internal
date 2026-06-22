@@ -6,6 +6,21 @@ A web application that lets KTMC manage all its business activities in one place
 sales, invoices, leads, clients, tasks, scheduling — with at-a-glance visuals for
 current and potential revenue.
 
+## Quickstart
+
+```bash
+npm install
+npm run dev      # run the site at http://localhost:5173
+```
+
+It runs immediately in **demo mode** (any login). To go live with real accounts
+and data, see [Connecting Supabase](#connecting-supabase-real-auth-database--document-storage).
+
+- **Adding features?** Start with [DEVELOPING.md](DEVELOPING.md) — it has the
+  project map and copy-paste recipes (new field, new page, new category…).
+- **Putting it online?** See [Deploy the site](DEVELOPING.md#deploy-the-site)
+  (one-click via Vercel or Netlify).
+
 ## Tech stack
 
 - **React 18 + TypeScript** (Vite)
