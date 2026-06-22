@@ -100,18 +100,63 @@ Monthly calendar for scheduling meetings, site visits and deadlines.
   "simulate inbound leads" action to demonstrate the flow.
 - **Curator** — connect KTMC Internal to your external Curator software workspace.
 
-## External integration notes (QUO & Curator)
+## QUO lead webhook
 
-These two connect to outside services and still need credentials/endpoints from
-those vendors to go fully live:
+Inbound QUO calls/form submissions create leads automatically via a Supabase
+**Edge Function** ([`supabase/functions/quo-webhook`](supabase/functions/quo-webhook/index.ts)).
+The flow: QUO → webhook → insert into `leads` → the app shows it **live**
+(Supabase Realtime), filed under your configured default category.
 
-- **QUO**: the settings screen captures your phone number, website and API key.
-  To auto-create leads, point a QUO webhook at a small serverless function (e.g. a
-  Supabase Edge Function) that inserts a row into the `leads` table — the app
-  picks it up on next load/refresh. The "Simulate inbound leads" button
-  demonstrates the end result today.
-- **Curator**: supply the Curator workspace URL + API key to enable linking /
-  data sync.
+### Deploy it
+
+Requires the [Supabase CLI](https://supabase.com/docs/guides/cli) (`supabase login`
+and `supabase link --project-ref <ref>` once):
+
+```bash
+# 1. Enable realtime on the leads table (run 0002 in the SQL Editor, or:)
+supabase db push
+
+# 2. Set a shared secret (use a long random string)
+supabase secrets set QUO_WEBHOOK_SECRET=$(openssl rand -hex 24)
+
+# 3. Deploy the function (no JWT — it authenticates with the shared secret)
+supabase functions deploy quo-webhook --no-verify-jwt
+```
+
+### Point QUO at it
+
+In your QUO account's webhook settings, use:
+
+```
+https://<project-ref>.supabase.co/functions/v1/quo-webhook?secret=<your-secret>
+```
+
+(The exact URL is shown with a copy button on the **QUO** screen in the app.) The
+secret can be sent as the `?secret=` query param or an `x-quo-secret` header.
+
+### Payload
+
+The function accepts JSON or form-encoded POST bodies and maps common field names
+(`name`, `company`, `email`, `phone`, `message`, `value`, `category`, `channel`).
+A `channel` containing "call"/"phone" is tagged as a phone lead, otherwise web.
+Example:
+
+```bash
+curl -X POST "https://<ref>.supabase.co/functions/v1/quo-webhook?secret=<secret>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Jane Doe","company":"Acme","email":"jane@acme.com",
+       "phone":"+1 555 0100","message":"Wants co-packing","value":15000,
+       "category":"co-packing","channel":"website"}'
+```
+
+If your QUO payload uses different field names, adjust `LEAD_FIELDS` at the top of
+the function. The **Simulate inbound leads** button on the QUO screen demonstrates
+the end result without QUO connected.
+
+## Curator integration
+
+The Curator screen captures the workspace URL + API key to enable linking / data
+sync once you wire up the Curator API.
 
 ## Project structure
 
@@ -131,5 +176,9 @@ src/
   data/seed.ts    Sample seed data (demo) + empty workspace shape
   types.ts        Domain types
 supabase/
-  migrations/0001_init.sql   Database schema, RLS policies, storage bucket
+  migrations/
+    0001_init.sql            Database schema, RLS policies, storage bucket
+    0002_realtime_leads.sql  Enable realtime on the leads table
+  functions/
+    quo-webhook/index.ts     Edge Function: QUO → leads
 ```

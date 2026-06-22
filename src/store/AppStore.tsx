@@ -11,8 +11,8 @@ import {
 import type { AppState, CategoryId, Client, Invoice, Lead } from "../types";
 import type { Action } from "./actions";
 import { emptyState, seedState } from "../data/seed";
-import { isSupabaseConfigured } from "../lib/supabase";
-import { fetchAll, persist } from "../lib/api";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { fetchAll, persist, toLead } from "../lib/api";
 import { useAuth } from "./AuthStore";
 
 const STORAGE_KEY = "ktmc-internal-state-v1";
@@ -28,6 +28,15 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, sales: state.sales.filter((s) => s.id !== action.id) };
 
     case "ADD_LEAD":
+      // Idempotent: an optimistic add and the realtime echo share an id.
+      if (state.leads.some((l) => l.id === action.lead.id)) {
+        return {
+          ...state,
+          leads: state.leads.map((l) =>
+            l.id === action.lead.id ? action.lead : l
+          ),
+        };
+      }
       return { ...state, leads: [action.lead, ...state.leads] };
     case "UPDATE_LEAD":
       return {
@@ -127,6 +136,8 @@ function init(): AppState {
 interface AppStoreContextValue {
   state: AppState;
   dispatch: React.Dispatch<Action>;
+  /** Re-load all data from the backend (no-op in demo mode). */
+  refresh: () => Promise<void>;
   /** True while the initial backend load is in flight (Supabase mode). */
   loading: boolean;
   /** Last sync/persist error, if any. */
@@ -186,6 +197,48 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
+  // Supabase mode: subscribe to live lead changes (e.g. from the QUO webhook)
+  // so new leads appear instantly. Applied with rawDispatch to avoid
+  // re-persisting changes that already came from the backend.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !user) return;
+    const sb = supabase;
+    const channel = sb
+      .channel("leads-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "leads" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const id = (payload.old as { id?: string }).id;
+            if (id) rawDispatch({ type: "DELETE_LEAD", id });
+          } else {
+            rawDispatch({ type: "ADD_LEAD", lead: toLead(payload.new) });
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      sb.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Manual re-load from the backend (used by a "Refresh" control).
+  const refresh = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    setLoading(true);
+    try {
+      const s = await fetchAll();
+      rawDispatch({ type: "HYDRATE", state: s });
+      setError(null);
+    } catch (e) {
+      console.error("Failed to refresh data from Supabase", e);
+      setError("Could not refresh data from the backend.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Write-through dispatch: update local state immediately, then persist.
   const dispatch = useCallback<React.Dispatch<Action>>((action) => {
     rawDispatch(action);
@@ -201,6 +254,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       dispatch,
+      refresh,
       loading,
       error,
       clientsByCategory: (c) => state.clients.filter((x) => x.category === c),
@@ -210,7 +264,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       clientName: (id) =>
         state.clients.find((x) => x.id === id)?.company ?? "Unknown client",
     }),
-    [state, dispatch, loading, error]
+    [state, dispatch, refresh, loading, error]
   );
 
   return (

@@ -1,10 +1,26 @@
 import { useState } from "react";
-import { PhoneCall, Globe, Zap, CheckCircle2, AlertCircle, Download } from "lucide-react";
+import {
+  PhoneCall,
+  Globe,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
+  Download,
+  Webhook,
+  Copy,
+  Check,
+  RefreshCw,
+} from "lucide-react";
 import type { CategoryId, Lead, LeadSource } from "../types";
 import { useStore } from "../store/AppStore";
 import { PageHeader } from "../components/PageHeader";
 import { CATEGORIES, categoryById, formatCurrency, formatDate, uid } from "../lib/format";
 import { LeadSourceBadge } from "../components/Badges";
+import { isSupabaseConfigured } from "../lib/supabase";
+
+const WEBHOOK_URL = isSupabaseConfigured
+  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/quo-webhook`
+  : "";
 
 // Sample inbound payloads to demonstrate auto-capture. In production these
 // arrive from QUO via webhook / API polling rather than being generated here.
@@ -32,8 +48,19 @@ const SAMPLE_INBOUND: Omit<Lead, "id" | "createdAt" | "category">[] = [
 ];
 
 export function QuoIntegration() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, refresh, loading } = useStore();
   const quo = state.quo;
+  const [copied, setCopied] = useState(false);
+
+  function copyWebhookUrl() {
+    navigator.clipboard?.writeText(WEBHOOK_URL).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      },
+      () => undefined
+    );
+  }
   const [phoneNumber, setPhoneNumber] = useState(quo.phoneNumber);
   const [websiteUrl, setWebsiteUrl] = useState(quo.websiteUrl);
   const [apiKey, setApiKey] = useState(quo.apiKey);
@@ -222,14 +249,58 @@ export function QuoIntegration() {
                 : "never"}
             </p>
           </div>
+
+          {isSupabaseConfigured && (
+            <div className="card mt-6 p-5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="rounded-lg bg-brand-100 p-1.5 text-brand-700">
+                  <Webhook size={16} />
+                </span>
+                <h2 className="text-sm font-semibold text-gray-900">Webhook URL</h2>
+              </div>
+              <p className="mb-2 text-xs text-gray-500">
+                Paste this into your QUO account's webhook settings, and append
+                <code className="mx-1 rounded bg-gray-100 px-1">?secret=…</code>
+                matching your deployed <code>QUO_WEBHOOK_SECRET</code>.
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded-lg bg-gray-50 px-2 py-1.5 text-xs text-gray-700">
+                  {WEBHOOK_URL}
+                </code>
+                <button
+                  className="btn-secondary px-2 py-1.5"
+                  onClick={copyWebhookUrl}
+                  aria-label="Copy webhook URL"
+                >
+                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-400">
+                Deploy the function with{" "}
+                <code className="rounded bg-gray-100 px-1">
+                  supabase functions deploy quo-webhook --no-verify-jwt
+                </code>
+                . See the README for full steps.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="mt-6 card">
-        <div className="border-b border-gray-200 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <h2 className="text-sm font-semibold text-gray-900">
             Leads captured via QUO ({quoLeads.length})
           </h2>
+          {isSupabaseConfigured && (
+            <button
+              className="btn-secondary"
+              onClick={() => void refresh()}
+              disabled={loading}
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
+            </button>
+          )}
         </div>
         {quoLeads.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-gray-400">

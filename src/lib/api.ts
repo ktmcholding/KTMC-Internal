@@ -53,7 +53,7 @@ function toDocument(r: Row): ClientDocument {
   };
 }
 
-function toLead(r: Row): Lead {
+export function toLead(r: Row): Lead {
   return {
     id: str(r.id),
     category: r.category as Lead["category"],
