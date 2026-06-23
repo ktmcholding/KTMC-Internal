@@ -4,6 +4,7 @@ import type {
   Client,
   ClientDocument,
   CuratorIntegrationConfig,
+  InternalDocument,
   Invoice,
   Lead,
   QuoIntegrationConfig,
@@ -36,6 +37,8 @@ export type Action =
   | { type: "DELETE_TASK"; id: string }
   | { type: "ADD_EVENT"; event: CalendarEvent }
   | { type: "DELETE_EVENT"; id: string }
+  | { type: "ADD_INTERNAL_DOCS"; documents: InternalDocument[] }
+  | { type: "DELETE_INTERNAL_DOC"; id: string; path?: string }
   | { type: "SET_QUO"; config: QuoIntegrationConfig }
   | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
   | { type: "RESET" };

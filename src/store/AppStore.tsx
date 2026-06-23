@@ -107,6 +107,19 @@ function reducer(state: AppState, action: Action): AppState {
     case "DELETE_EVENT":
       return { ...state, events: state.events.filter((e) => e.id !== action.id) };
 
+    case "ADD_INTERNAL_DOCS":
+      return {
+        ...state,
+        internalDocuments: [...action.documents, ...state.internalDocuments],
+      };
+    case "DELETE_INTERNAL_DOC":
+      return {
+        ...state,
+        internalDocuments: state.internalDocuments.filter(
+          (d) => d.id !== action.id
+        ),
+      };
+
     case "SET_QUO":
       return { ...state, quo: action.config };
     case "SET_CURATOR":

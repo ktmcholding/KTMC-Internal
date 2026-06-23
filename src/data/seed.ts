@@ -26,6 +26,7 @@ export function emptyState(): AppState {
     invoices: [],
     tasks: [],
     events: [],
+    internalDocuments: [],
     quo: { ...defaultQuo },
     curator: { ...defaultCurator },
   };
@@ -165,6 +166,28 @@ export const seedState: AppState = {
     { id: "e1", title: "Aurora formulation review", date: "2026-06-24", time: "10:00", category: "formulation", notes: "Phase 2 kickoff." },
     { id: "e2", title: "Hydra Drinks site visit", date: "2026-06-26", time: "14:00", category: "co-packing", notes: "Tour the canning line." },
     { id: "e3", title: "Brand marketing standup", date: "2026-06-22", time: "09:30", category: "our-brands", notes: "" },
+  ],
+  internalDocuments: [
+    {
+      id: "idoc_1",
+      name: "Employee-handbook.pdf",
+      size: 412_000,
+      type: "application/pdf",
+      folder: "hr",
+      notes: "Current company handbook.",
+      uploadedAt: "2026-01-10",
+      uploadedBy: "ktmcholding@gmail.com",
+    },
+    {
+      id: "idoc_2",
+      name: "Supplier-NDA-template.docx",
+      size: 88_000,
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      folder: "legal",
+      notes: "Standard NDA we send to suppliers.",
+      uploadedAt: "2026-03-02",
+      uploadedBy: "ktmcholding@gmail.com",
+    },
   ],
   quo: {
     connected: false,

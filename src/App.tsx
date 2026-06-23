@@ -9,6 +9,7 @@ import { DutiesTasks } from "./pages/DutiesTasks";
 import { CalendarPage } from "./pages/Calendar";
 import { Curator } from "./pages/Curator";
 import { QuoIntegration } from "./pages/QuoIntegration";
+import { InternalDocuments } from "./pages/InternalDocuments";
 import { type ReactNode } from "react";
 
 function FullScreenLoader() {
@@ -64,6 +65,14 @@ export default function App() {
         element={
           <RequireAuth>
             <CalendarPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/documents"
+        element={
+          <RequireAuth>
+            <InternalDocuments />
           </RequireAuth>
         }
       />

@@ -1,4 +1,8 @@
-import { supabase, DOCUMENTS_BUCKET } from "./supabase";
+import {
+  supabase,
+  DOCUMENTS_BUCKET,
+  INTERNAL_DOCUMENTS_BUCKET,
+} from "./supabase";
 import type { Action } from "../store/actions";
 import { emptyState } from "../data/seed";
 import type {
@@ -6,6 +10,8 @@ import type {
   CalendarEvent,
   Client,
   ClientDocument,
+  InternalDocument,
+  InternalDocFolder,
   Invoice,
   InvoiceLineItem,
   Lead,
@@ -117,6 +123,20 @@ function toTask(r: Row): Task {
   };
 }
 
+function toInternalDocument(r: Row): InternalDocument {
+  return {
+    id: str(r.id),
+    name: str(r.name),
+    size: num(r.size),
+    type: str(r.type),
+    folder: (str(r.folder) || "general") as InternalDocFolder,
+    notes: str(r.notes),
+    uploadedAt: str(r.uploaded_at),
+    uploadedBy: str(r.uploaded_by),
+    path: r.path ? str(r.path) : undefined,
+  };
+}
+
 function toEvent(r: Row): CalendarEvent {
   return {
     id: str(r.id),
@@ -144,6 +164,7 @@ export async function fetchAll(): Promise<AppState> {
     tasksRes,
     eventsRes,
     settingsRes,
+    internalDocsRes,
   ] = await Promise.all([
     sb.from("clients").select("*"),
     sb.from("documents").select("*"),
@@ -154,6 +175,7 @@ export async function fetchAll(): Promise<AppState> {
     sb.from("tasks").select("*"),
     sb.from("events").select("*"),
     sb.from("settings").select("*"),
+    sb.from("internal_documents").select("*"),
   ]);
 
   const firstError =
@@ -165,7 +187,8 @@ export async function fetchAll(): Promise<AppState> {
     lineItemsRes.error ||
     tasksRes.error ||
     eventsRes.error ||
-    settingsRes.error;
+    settingsRes.error ||
+    internalDocsRes.error;
   if (firstError) throw firstError;
 
   const docsByClient = new Map<string, ClientDocument[]>();
@@ -201,6 +224,9 @@ export async function fetchAll(): Promise<AppState> {
     ),
     tasks: (tasksRes.data ?? []).map((r) => toTask(r as Row)),
     events: (eventsRes.data ?? []).map((r) => toEvent(r as Row)),
+    internalDocuments: (internalDocsRes.data ?? []).map((r) =>
+      toInternalDocument(r as Row)
+    ),
     quo: { ...base.quo, ...((settingsMap.get("quo") as object) ?? {}) },
     curator: {
       ...base.curator,
@@ -248,6 +274,50 @@ export async function getDocumentUrl(path: string): Promise<string | null> {
     .createSignedUrl(path, 60 * 5);
   if (error) {
     console.error("Failed to sign document URL", error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+/** Upload files to the internal vault and return document records. */
+export async function uploadInternalDocuments(
+  files: File[],
+  folder: InternalDocFolder,
+  uploadedBy: string,
+  notes = ""
+): Promise<InternalDocument[]> {
+  const sb = db();
+  const out: InternalDocument[] = [];
+  for (const file of files) {
+    const id = uid("idoc");
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+    const path = `${folder}/${id}-${safeName}`;
+    const { error } = await sb.storage
+      .from(INTERNAL_DOCUMENTS_BUCKET)
+      .upload(path, file, { upsert: false });
+    if (error) throw error;
+    out.push({
+      id,
+      name: file.name,
+      size: file.size,
+      type: file.type || "application/octet-stream",
+      folder,
+      notes,
+      uploadedAt: new Date().toISOString().slice(0, 10),
+      uploadedBy,
+      path,
+    });
+  }
+  return out;
+}
+
+export async function getInternalDocumentUrl(path: string): Promise<string | null> {
+  const sb = db();
+  const { data, error } = await sb.storage
+    .from(INTERNAL_DOCUMENTS_BUCKET)
+    .createSignedUrl(path, 60 * 5);
+  if (error) {
+    console.error("Failed to sign internal document URL", error);
     return null;
   }
   return data.signedUrl;
@@ -380,6 +450,33 @@ export async function persist(action: Action): Promise<void> {
       return;
     case "DELETE_EVENT":
       await throwOn(sb.from("events").delete().eq("id", action.id));
+      return;
+
+    case "ADD_INTERNAL_DOCS":
+      await throwOn(
+        sb.from("internal_documents").insert(
+          action.documents.map((d) => ({
+            id: d.id,
+            name: d.name,
+            size: d.size,
+            type: d.type,
+            folder: d.folder,
+            notes: d.notes,
+            uploaded_at: d.uploadedAt,
+            uploaded_by: d.uploadedBy,
+            path: d.path ?? null,
+          }))
+        )
+      );
+      return;
+    case "DELETE_INTERNAL_DOC":
+      if (action.path) {
+        const { error } = await sb.storage
+          .from(INTERNAL_DOCUMENTS_BUCKET)
+          .remove([action.path]);
+        if (error) console.error("Failed to remove internal storage object", error);
+      }
+      await throwOn(sb.from("internal_documents").delete().eq("id", action.id));
       return;
 
     case "SET_QUO":

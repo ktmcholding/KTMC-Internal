@@ -21,3 +21,6 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
 
 /** Storage bucket that holds client documents. */
 export const DOCUMENTS_BUCKET = "client-documents";
+
+/** Storage bucket that holds company-wide internal documents. */
+export const INTERNAL_DOCUMENTS_BUCKET = "internal-documents";

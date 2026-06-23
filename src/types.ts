@@ -133,6 +133,28 @@ export interface CuratorIntegrationConfig {
   apiKey: string;
 }
 
+/** A folder/section for the internal document vault. */
+export type InternalDocFolder =
+  | "general"
+  | "hr"
+  | "legal"
+  | "finance"
+  | "operations"
+  | "compliance";
+
+/** A company-wide internal document (not tied to a client). */
+export interface InternalDocument {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  folder: InternalDocFolder;
+  notes: string;
+  uploadedAt: string; // ISO date
+  uploadedBy: string; // email/name
+  path?: string; // storage object path
+}
+
 export interface AppState {
   leads: Lead[];
   sales: SaleRecord[];
@@ -140,6 +162,16 @@ export interface AppState {
   clients: Client[];
   tasks: Task[];
   events: CalendarEvent[];
+  internalDocuments: InternalDocument[];
   quo: QuoIntegrationConfig;
   curator: CuratorIntegrationConfig;
 }
+
+export const INTERNAL_DOC_FOLDERS: { id: InternalDocFolder; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "hr", label: "HR" },
+  { id: "legal", label: "Legal" },
+  { id: "finance", label: "Finance" },
+  { id: "operations", label: "Operations" },
+  { id: "compliance", label: "Compliance" },
+];
