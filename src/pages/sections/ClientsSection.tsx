@@ -8,11 +8,13 @@ import {
   PhoneIncoming,
   PhoneOutgoing,
   PlayCircle,
+  Mail,
 } from "lucide-react";
 import type { CallRecord, CategoryId, Client, ClientDocument } from "../../types";
 import { useStore } from "../../store/AppStore";
 import { StatCard } from "../../components/StatCard";
 import { Modal } from "../../components/Modal";
+import { DraftEmailModal } from "../../components/DraftEmailModal";
 import { DocumentDropzone } from "../../components/DocumentDropzone";
 import { formatCurrency, formatDate, uid } from "../../lib/format";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -23,6 +25,7 @@ export function ClientsSection({ category }: { category: CategoryId }) {
   const clients = clientsByCategory(category);
   const [showAdd, setShowAdd] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(clients[0]?.id ?? null);
+  const [draftFor, setDraftFor] = useState<Client | null>(null);
 
   const totalRecurring = clients.reduce((s, c) => s + c.recurringRevenue, 0);
   const totalDocs = clients.reduce((s, c) => s + c.documents.length, 0);
@@ -103,14 +106,22 @@ export function ClientsSection({ category }: { category: CategoryId }) {
                             />
                             <Row label="Client since" value={formatDate(c.createdAt)} />
                           </dl>
-                          <button
-                            className="btn-ghost mt-3 px-2 py-1 text-xs text-red-500 hover:bg-red-50"
-                            onClick={() =>
-                              dispatch({ type: "DELETE_CLIENT", id: c.id })
-                            }
-                          >
-                            <Trash2 size={13} /> Remove client
-                          </button>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              className="btn-secondary px-2.5 py-1 text-xs"
+                              onClick={() => setDraftFor(c)}
+                            >
+                              <Mail size={13} /> Draft email
+                            </button>
+                            <button
+                              className="btn-ghost px-2 py-1 text-xs text-red-500 hover:bg-red-50"
+                              onClick={() =>
+                                dispatch({ type: "DELETE_CLIENT", id: c.id })
+                              }
+                            >
+                              <Trash2 size={13} /> Remove client
+                            </button>
+                          </div>
                         </div>
                         <div>
                           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -183,6 +194,9 @@ export function ClientsSection({ category }: { category: CategoryId }) {
           onClose={() => setShowAdd(false)}
           onCreated={(id) => setExpanded(id)}
         />
+      )}
+      {draftFor && (
+        <DraftEmailModal client={draftFor} onClose={() => setDraftFor(null)} />
       )}
     </div>
   );

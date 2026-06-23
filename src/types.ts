@@ -106,6 +106,13 @@ export interface CallRecord {
   occurredAt: string; // ISO timestamp
 }
 
+/** A sample of the user's past emails/conversations, used as a writing-style basis. */
+export interface EmailExample {
+  id: string;
+  label: string;
+  content: string;
+}
+
 export type TaskStatus = "todo" | "in-progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 
@@ -218,6 +225,7 @@ export interface AppState {
   internalDocuments: InternalDocument[];
   employees: Employee[];
   calls: CallRecord[];
+  emailExamples: EmailExample[];
   quo: QuoIntegrationConfig;
   curator: CuratorIntegrationConfig;
 }

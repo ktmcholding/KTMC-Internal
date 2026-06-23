@@ -5,6 +5,7 @@ import type {
   ClientDocument,
   CallRecord,
   CuratorIntegrationConfig,
+  EmailExample,
   Employee,
   InternalDocument,
   Invoice,
@@ -46,6 +47,7 @@ export type Action =
   | { type: "DELETE_EMPLOYEE"; id: string }
   | { type: "ADD_CALL"; call: CallRecord }
   | { type: "DELETE_CALL"; id: string }
+  | { type: "SET_EMAIL_EXAMPLES"; examples: EmailExample[] }
   | { type: "SET_QUO"; config: QuoIntegrationConfig }
   | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
   | { type: "RESET" };

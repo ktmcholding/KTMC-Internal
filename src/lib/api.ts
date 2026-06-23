@@ -12,6 +12,7 @@ import type {
   CallRecord,
   Client,
   ClientDocument,
+  EmailExample,
   Employee,
   InternalDocument,
   InternalDocFolder,
@@ -278,6 +279,8 @@ export async function fetchAll(): Promise<AppState> {
     ),
     employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
     calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
+    emailExamples:
+      (settingsMap.get("email_examples") as EmailExample[] | undefined) ?? [],
     quo: { ...base.quo, ...((settingsMap.get("quo") as object) ?? {}) },
     curator: {
       ...base.curator,
@@ -440,6 +443,33 @@ export async function createEmployee(input: {
     employee: toEmployee(res.employee),
     tempPassword: res.tempPassword,
   };
+}
+
+// ---------------------------------------------------------------------------
+// AI email drafting (via the draft-email Edge Function, Claude Haiku 4.5)
+// ---------------------------------------------------------------------------
+
+export interface DraftEmailInput {
+  clientName: string;
+  context: string; // recent calls/notes summarising the conversation
+  instruction: string; // what the email should achieve
+  examples: { label: string; content: string }[]; // style samples
+}
+
+export interface DraftedEmail {
+  subject: string;
+  body: string;
+}
+
+export async function draftEmail(input: DraftEmailInput): Promise<DraftedEmail> {
+  const sb = db();
+  const { data, error } = await sb.functions.invoke("draft-email", {
+    body: input,
+  });
+  if (error) throw error;
+  const res = data as Partial<DraftedEmail> & { error?: string };
+  if (res.error) throw new Error(res.error);
+  return { subject: res.subject ?? "", body: res.body ?? "" };
 }
 
 // ---------------------------------------------------------------------------
@@ -639,6 +669,14 @@ export async function persist(action: Action): Promise<void> {
     }
     case "DELETE_CALL":
       await throwOn(sb.from("calls").delete().eq("id", action.id));
+      return;
+
+    case "SET_EMAIL_EXAMPLES":
+      await throwOn(
+        sb
+          .from("settings")
+          .upsert({ key: "email_examples", value: action.examples })
+      );
       return;
 
     case "SET_QUO":

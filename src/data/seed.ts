@@ -29,6 +29,7 @@ export function emptyState(): AppState {
     internalDocuments: [],
     employees: [],
     calls: [],
+    emailExamples: [],
     quo: { ...defaultQuo },
     curator: { ...defaultCurator },
   };
@@ -189,6 +190,14 @@ export const seedState: AppState = {
       notes: "Standard NDA we send to suppliers.",
       uploadedAt: "2026-03-02",
       uploadedBy: "ktmcholding@gmail.com",
+    },
+  ],
+  emailExamples: [
+    {
+      id: "ex_1",
+      label: "Follow-up after a sales call",
+      content:
+        "Hi {{name}},\n\nGreat speaking with you earlier. To recap what we discussed: you're looking to move forward with a first production run, and I'll have a detailed quote over to you by end of week. In the meantime, let me know if any other questions come up.\n\nBest,\nKTMC Team",
     },
   ],
   calls: [

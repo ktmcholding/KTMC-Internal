@@ -100,7 +100,8 @@ Each business category has four tabs:
 - **Sales** — current, recurring and potential revenue with a monthly chart; record new sales.
 - **Invoices** — create invoices (multi-line-item) and track status (draft / sent / paid / overdue).
 - **Leads** — pipeline with potential revenue, status tracking, and QUO source tagging.
-- **Clients** — manage existing clients; each client has a **drag-and-drop document area** for uploading multiple files.
+- **Clients** — manage existing clients; each client has a **drag-and-drop document area**, a
+  **call-history timeline** (QUO call summaries), and a **"Draft email"** action.
 
 ### Duties & Tasks
 A simple kanban board (To do / In progress / Done) for internal duties. Per the
@@ -109,11 +110,33 @@ spec, this category has no sales/invoices/leads sections.
 ### Calendar
 Monthly calendar for scheduling meetings, site visits and deadlines.
 
+### Internal Documents
+A company-wide document vault (separate from per-client files), organised into
+folders (General, HR, Legal, Finance, Operations, Compliance) with drag-and-drop
+upload and download.
+
+### Team & Monitoring (admin only)
+- **Members** — add team members, assign a role (admin / employee) and grant
+  **per-person access** to specific sections of the site.
+- **Monitoring** — silent, admin-only activity tracking: active time, time per
+  section, and recent actions per employee (today / last 7 days). Tracking runs
+  in the background and is not shown to the tracked user.
+
 ### Integrations
 - **QUO (Lead Capture)** — connect your QUO business phone number and website so
-  inbound calls and form submissions create leads automatically. Includes a
-  "simulate inbound leads" action to demonstrate the flow.
+  inbound calls and form submissions create leads automatically, **routed to the
+  right category by keyword**. Phone-call summaries are attached to the matching
+  client's profile. Includes a "simulate inbound leads" action to demo the flow.
+- **AI email drafting** — on a client profile, **Draft email** writes a follow-up
+  email in KTMC's voice (Claude Haiku 4.5), using your uploaded past emails /
+  chats as the style basis.
 - **Curator** — connect KTMC Internal to your external Curator software workspace.
+
+> **Heads-up on employee monitoring:** activity tracking records work *within this
+> tool only* (active time, sections, actions) and is visible only to admins.
+> Monitoring staff without their knowledge has legal disclosure requirements in
+> many regions (US states, the EU/UK) — confirm your obligations before relying
+> on it.
 
 ## QUO lead webhook
 
@@ -164,9 +187,48 @@ curl -X POST "https://<ref>.supabase.co/functions/v1/quo-webhook?secret=<secret>
        "category":"co-packing","channel":"website"}'
 ```
 
-If your QUO payload uses different field names, adjust `LEAD_FIELDS` at the top of
-the function. The **Simulate inbound leads** button on the QUO screen demonstrates
-the end result without QUO connected.
+If your QUO payload uses different field names, adjust `LEAD_FIELDS` / `CALL_FIELDS`
+or the `KEYWORDS` map at the top of the function. The **Simulate inbound leads**
+button on the QUO screen demonstrates the end result without QUO connected.
+
+### Call summaries
+
+The same webhook also accepts QUO **call-summary** events (a payload with a
+`summary`/`transcript`/`recording_url`, or `type` containing "call"). It matches
+the caller to a client by phone number and stores the summary on that client's
+**call history** timeline. Example:
+
+```bash
+curl -X POST "https://<ref>.supabase.co/functions/v1/quo-webhook?secret=<secret>" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"call","phone":"+1 (415) 555-0142","direction":"inbound",
+       "summary":"Discussed timeline and next steps.","duration":372}'
+```
+
+## Employee management (manage-employee function)
+
+Admins add team members from **Team → Members**. Creating a login requires the
+service role, so it runs through an Edge Function:
+
+```bash
+supabase functions deploy manage-employee   # JWT verification ON (signed-in admins only)
+```
+
+The function verifies the caller is an admin, creates the auth user with a
+temporary password (shown once to the admin to share), and writes their profile.
+The **first** person to sign in becomes the admin automatically.
+
+## AI email drafting (draft-email function)
+
+The **Draft email** button on a client profile calls Claude Haiku 4.5 to write a
+follow-up in KTMC's voice, using the writing samples you add in the modal.
+
+```bash
+supabase functions deploy draft-email                  # JWT verification ON
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...       # from console.anthropic.com
+```
+
+Without the key the app falls back to a simple template in demo mode.
 
 ## Curator integration
 
@@ -177,23 +239,32 @@ sync once you wire up the Curator API.
 
 ```
 src/
-  components/     Reusable UI (layout, charts, modal, dropzone, badges)
-  pages/          Top-level screens
+  components/     Reusable UI (layout, charts, modal, dropzone, draft-email…)
+  pages/          Top-level screens (Dashboard, Category, Team, Documents…)
     sections/     Category tab sections (Sales, Invoices, Leads, Clients)
   store/          App + auth state
-    AuthStore.tsx   Supabase Auth (or demo) sessions
-    AppStore.tsx    Data state: hydrate from backend + write-through, or demo
+    AuthStore.tsx   Supabase Auth + employee profile (role/permissions)
+    AppStore.tsx    Data state: hydrate + write-through + realtime + activity log
     actions.ts      Shared action types
   lib/
     supabase.ts     Supabase client + config detection
-    api.ts          Backend data access, persistence & document storage
+    api.ts          Backend data access, persistence, storage, AI calls
+    sections.ts     Section keys + per-person access helpers
     format.ts       Categories + formatting helpers
   data/seed.ts    Sample seed data (demo) + empty workspace shape
   types.ts        Domain types
 supabase/
   migrations/
-    0001_init.sql            Database schema, RLS policies, storage bucket
-    0002_realtime_leads.sql  Enable realtime on the leads table
+    0001_init.sql               Schema, RLS, client-documents bucket
+    0002_realtime_leads.sql     Realtime on leads
+    0003_internal_documents.sql Internal vault table + bucket
+    0004_employees_activity.sql Employees + activity tracking + RLS
+    0005_calls.sql              Call records + realtime
   functions/
-    quo-webhook/index.ts     Edge Function: QUO → leads
+    quo-webhook/index.ts        QUO → leads (keyword-routed) + call summaries
+    manage-employee/index.ts    Admin-only employee creation
+    draft-email/index.ts        AI email drafting (Claude Haiku 4.5)
 ```
+
+> **Run all migrations** `0001`–`0005` in order in the Supabase SQL Editor (or
+> `supabase db push`) before using the backend.

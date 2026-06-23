@@ -44,6 +44,7 @@ function describeAction(action: Action): string | null {
     case "DELETE_EMPLOYEE": return "Removed a team member";
     case "ADD_CALL": return "Logged a call";
     case "DELETE_CALL": return "Deleted a call";
+    case "SET_EMAIL_EXAMPLES": return "Updated email writing samples";
     default: return null;
   }
 }
@@ -188,6 +189,9 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, calls: [action.call, ...state.calls] };
     case "DELETE_CALL":
       return { ...state, calls: state.calls.filter((c) => c.id !== action.id) };
+
+    case "SET_EMAIL_EXAMPLES":
+      return { ...state, emailExamples: action.examples };
 
     case "SET_QUO":
       return { ...state, quo: action.config };
