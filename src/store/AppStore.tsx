@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -12,8 +13,38 @@ import type { AppState, CategoryId, Client, Invoice, Lead } from "../types";
 import type { Action } from "./actions";
 import { emptyState, seedState } from "../data/seed";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
-import { fetchAll, persist, toLead } from "../lib/api";
+import { fetchAll, logActivity, persist, toLead } from "../lib/api";
 import { useAuth } from "./AuthStore";
+
+/** Human-readable label for an action, used in the silent activity log. */
+function describeAction(action: Action): string | null {
+  switch (action.type) {
+    case "ADD_SALE": return "Recorded a sale";
+    case "DELETE_SALE": return "Deleted a sale";
+    case "ADD_LEAD": return "Added a lead";
+    case "UPDATE_LEAD": return `Updated lead (${action.lead.status})`;
+    case "DELETE_LEAD": return "Deleted a lead";
+    case "ADD_INVOICE": return `Created invoice ${action.invoice.number}`;
+    case "UPDATE_INVOICE": return `Updated invoice ${action.invoice.number}`;
+    case "DELETE_INVOICE": return "Deleted an invoice";
+    case "ADD_CLIENT": return "Added a client";
+    case "UPDATE_CLIENT": return "Updated a client";
+    case "DELETE_CLIENT": return "Removed a client";
+    case "ADD_CLIENT_DOCUMENTS": return "Uploaded client document(s)";
+    case "DELETE_CLIENT_DOCUMENT": return "Deleted a client document";
+    case "ADD_TASK": return "Created a task";
+    case "UPDATE_TASK": return `Updated task (${action.task.status})`;
+    case "DELETE_TASK": return "Deleted a task";
+    case "ADD_EVENT": return "Added a calendar event";
+    case "DELETE_EVENT": return "Deleted a calendar event";
+    case "ADD_INTERNAL_DOCS": return "Uploaded internal document(s)";
+    case "DELETE_INTERNAL_DOC": return "Deleted an internal document";
+    case "ADD_EMPLOYEE": return "Added a team member";
+    case "UPDATE_EMPLOYEE": return "Updated a team member";
+    case "DELETE_EMPLOYEE": return "Removed a team member";
+    default: return null;
+  }
+}
 
 const STORAGE_KEY = "ktmc-internal-state-v1";
 
@@ -120,6 +151,29 @@ function reducer(state: AppState, action: Action): AppState {
         ),
       };
 
+    case "ADD_EMPLOYEE":
+      if (state.employees.some((e) => e.id === action.employee.id)) {
+        return {
+          ...state,
+          employees: state.employees.map((e) =>
+            e.id === action.employee.id ? action.employee : e
+          ),
+        };
+      }
+      return { ...state, employees: [...state.employees, action.employee] };
+    case "UPDATE_EMPLOYEE":
+      return {
+        ...state,
+        employees: state.employees.map((e) =>
+          e.id === action.employee.id ? action.employee : e
+        ),
+      };
+    case "DELETE_EMPLOYEE":
+      return {
+        ...state,
+        employees: state.employees.filter((e) => e.id !== action.id),
+      };
+
     case "SET_QUO":
       return { ...state, quo: action.config };
     case "SET_CURATOR":
@@ -170,6 +224,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(isSupabaseConfigured);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  // Keep the latest user in a ref so the stable dispatch can log activity.
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Demo mode: persist the whole state to localStorage.
   useEffect(() => {
@@ -260,6 +319,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         console.error("Failed to save change to the backend", action.type, e);
         setError("A change could not be saved to the backend. Please retry.");
       });
+      // Silent activity log of meaningful actions.
+      const label = describeAction(action);
+      const u = userRef.current;
+      if (label && u) {
+        void logActivity(u.id, u.email, "action", label, window.location.pathname);
+      }
     }
   }, []);
 

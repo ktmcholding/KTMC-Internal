@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -12,37 +12,60 @@ import {
   FolderLock,
   Sparkles,
   PhoneCall,
+  Users,
   LogOut,
   Menu,
   X,
 } from "lucide-react";
 import { useAuth } from "../store/AuthStore";
+import { ActivityTracker } from "./ActivityTracker";
+import type { SectionKey } from "../types";
 
-const navItems = [
-  { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
-  { type: "heading", label: "KTMC internal system" } as const,
-  { to: "/category/formulation", label: "Formulation", icon: FlaskConical },
-  { to: "/category/co-packing", label: "Co-packing", icon: Boxes },
-  {
-    to: "/category/private-white-label",
-    label: "Private & White Label",
-    icon: Tags,
-  },
-  { to: "/category/our-brands", label: "Our Brands", icon: Store },
-  { to: "/category/software", label: "Software", icon: Code2 },
-  { type: "heading", label: "Operations" } as const,
-  { to: "/duties", label: "Duties & Tasks", icon: ListChecks },
-  { to: "/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/documents", label: "Internal Documents", icon: FolderLock },
-  { type: "heading", label: "Integrations" } as const,
-  { to: "/curator", label: "Curator", icon: Sparkles },
-  { to: "/quo", label: "QUO (Leads)", icon: PhoneCall },
+type NavHeading = { type: "heading"; label: string };
+type NavLinkItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  section: SectionKey;
+  end?: boolean;
+};
+type NavEntry = NavHeading | NavLinkItem;
+
+const navItems: NavEntry[] = [
+  { to: "/", label: "Overview", icon: LayoutDashboard, section: "dashboard", end: true },
+  { type: "heading", label: "KTMC internal system" },
+  { to: "/category/formulation", label: "Formulation", icon: FlaskConical, section: "formulation" },
+  { to: "/category/co-packing", label: "Co-packing", icon: Boxes, section: "co-packing" },
+  { to: "/category/private-white-label", label: "Private & White Label", icon: Tags, section: "private-white-label" },
+  { to: "/category/our-brands", label: "Our Brands", icon: Store, section: "our-brands" },
+  { to: "/category/software", label: "Software", icon: Code2, section: "software" },
+  { type: "heading", label: "Operations" },
+  { to: "/duties", label: "Duties & Tasks", icon: ListChecks, section: "duties" },
+  { to: "/calendar", label: "Calendar", icon: CalendarDays, section: "calendar" },
+  { to: "/documents", label: "Internal Documents", icon: FolderLock, section: "documents" },
+  { type: "heading", label: "Integrations" },
+  { to: "/curator", label: "Curator", icon: Sparkles, section: "curator" },
+  { to: "/quo", label: "QUO (Leads)", icon: PhoneCall, section: "quo" },
+  { type: "heading", label: "Administration" },
+  { to: "/team", label: "Team & Monitoring", icon: Users, section: "team" },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Filter nav by permission, then drop any heading with no visible items.
+  const visibleItems = useMemo(() => {
+    const allowed = navItems.filter((it) =>
+      "type" in it ? true : can(it.section)
+    );
+    return allowed.filter((it, i) => {
+      if (!("type" in it)) return true;
+      const next = allowed[i + 1];
+      return next !== undefined && !("type" in next);
+    });
+  }, [can]);
 
   function handleLogout() {
     logout();
@@ -63,8 +86,8 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
-        {navItems.map((item, idx) => {
-          if ("type" in item && item.type === "heading") {
+        {visibleItems.map((item, idx) => {
+          if ("type" in item) {
             return (
               <p
                 key={`h-${idx}`}
@@ -74,11 +97,11 @@ export function Layout({ children }: { children: ReactNode }) {
               </p>
             );
           }
-          const Icon = item.icon!;
+          const Icon = item.icon;
           return (
             <NavLink
               key={item.to}
-              to={item.to!}
+              to={item.to}
               end={item.end}
               onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
@@ -118,6 +141,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
+      <ActivityTracker />
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white lg:block">
         {sidebar}

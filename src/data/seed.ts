@@ -27,6 +27,7 @@ export function emptyState(): AppState {
     tasks: [],
     events: [],
     internalDocuments: [],
+    employees: [],
     quo: { ...defaultQuo },
     curator: { ...defaultCurator },
   };
@@ -187,6 +188,26 @@ export const seedState: AppState = {
       notes: "Standard NDA we send to suppliers.",
       uploadedAt: "2026-03-02",
       uploadedBy: "ktmcholding@gmail.com",
+    },
+  ],
+  employees: [
+    {
+      id: "demo-user",
+      email: "ktmcholding@gmail.com",
+      name: "KTMC Owner",
+      role: "admin",
+      permissions: [],
+      active: true,
+      createdAt: "2025-06-01",
+    },
+    {
+      id: "emp_sample",
+      email: "sales@ktmc.com",
+      name: "Sample Employee",
+      role: "employee",
+      permissions: ["formulation", "co-packing", "calendar", "quo"],
+      active: true,
+      createdAt: "2026-02-01",
     },
   ],
   quo: {

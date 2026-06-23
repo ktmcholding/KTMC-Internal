@@ -10,7 +10,9 @@ import { CalendarPage } from "./pages/Calendar";
 import { Curator } from "./pages/Curator";
 import { QuoIntegration } from "./pages/QuoIntegration";
 import { InternalDocuments } from "./pages/InternalDocuments";
+import { Team } from "./pages/Team";
 import { type ReactNode } from "react";
+import type { SectionKey } from "./types";
 
 function FullScreenLoader() {
   return (
@@ -20,14 +22,24 @@ function FullScreenLoader() {
   );
 }
 
-function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+function RequireAuth({
+  children,
+  section,
+}: {
+  children: ReactNode;
+  /** If set, the user must have access to this section. */
+  section?: SectionKey;
+}) {
+  const { user, loading, can } = useAuth();
   const location = useLocation();
   if (loading) {
     return <FullScreenLoader />;
   }
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (section && !can(section)) {
+    return <Navigate to="/" replace />;
   }
   return <Layout>{children}</Layout>;
 }
@@ -55,7 +67,7 @@ export default function App() {
       <Route
         path="/duties"
         element={
-          <RequireAuth>
+          <RequireAuth section="duties">
             <DutiesTasks />
           </RequireAuth>
         }
@@ -63,7 +75,7 @@ export default function App() {
       <Route
         path="/calendar"
         element={
-          <RequireAuth>
+          <RequireAuth section="calendar">
             <CalendarPage />
           </RequireAuth>
         }
@@ -71,7 +83,7 @@ export default function App() {
       <Route
         path="/documents"
         element={
-          <RequireAuth>
+          <RequireAuth section="documents">
             <InternalDocuments />
           </RequireAuth>
         }
@@ -79,7 +91,7 @@ export default function App() {
       <Route
         path="/curator"
         element={
-          <RequireAuth>
+          <RequireAuth section="curator">
             <Curator />
           </RequireAuth>
         }
@@ -87,8 +99,16 @@ export default function App() {
       <Route
         path="/quo"
         element={
-          <RequireAuth>
+          <RequireAuth section="quo">
             <QuoIntegration />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/team"
+        element={
+          <RequireAuth section="team">
+            <Team />
           </RequireAuth>
         }
       />

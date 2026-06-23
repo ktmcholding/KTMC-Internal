@@ -6,16 +6,19 @@ import {
 import type { Action } from "../store/actions";
 import { emptyState } from "../data/seed";
 import type {
+  ActivityEvent,
   AppState,
   CalendarEvent,
   Client,
   ClientDocument,
+  Employee,
   InternalDocument,
   InternalDocFolder,
   Invoice,
   InvoiceLineItem,
   Lead,
   SaleRecord,
+  SectionKey,
   Task,
 } from "../types";
 import { uid } from "./format";
@@ -123,6 +126,30 @@ function toTask(r: Row): Task {
   };
 }
 
+function toEmployee(r: Row): Employee {
+  return {
+    id: str(r.id),
+    email: str(r.email),
+    name: str(r.name),
+    role: (r.role as Employee["role"]) ?? "employee",
+    permissions: (r.permissions as SectionKey[]) ?? [],
+    active: Boolean(r.active),
+    createdAt: str(r.created_at),
+  };
+}
+
+function toActivity(r: Row): ActivityEvent {
+  return {
+    id: str(r.id),
+    userId: str(r.user_id),
+    userEmail: str(r.user_email),
+    type: r.type as ActivityEvent["type"],
+    detail: str(r.detail),
+    path: str(r.path),
+    at: str(r.at),
+  };
+}
+
 function toInternalDocument(r: Row): InternalDocument {
   return {
     id: str(r.id),
@@ -165,6 +192,7 @@ export async function fetchAll(): Promise<AppState> {
     eventsRes,
     settingsRes,
     internalDocsRes,
+    employeesRes,
   ] = await Promise.all([
     sb.from("clients").select("*"),
     sb.from("documents").select("*"),
@@ -176,6 +204,7 @@ export async function fetchAll(): Promise<AppState> {
     sb.from("events").select("*"),
     sb.from("settings").select("*"),
     sb.from("internal_documents").select("*"),
+    sb.from("employees").select("*"),
   ]);
 
   const firstError =
@@ -188,7 +217,8 @@ export async function fetchAll(): Promise<AppState> {
     tasksRes.error ||
     eventsRes.error ||
     settingsRes.error ||
-    internalDocsRes.error;
+    internalDocsRes.error ||
+    employeesRes.error;
   if (firstError) throw firstError;
 
   const docsByClient = new Map<string, ClientDocument[]>();
@@ -227,6 +257,7 @@ export async function fetchAll(): Promise<AppState> {
     internalDocuments: (internalDocsRes.data ?? []).map((r) =>
       toInternalDocument(r as Row)
     ),
+    employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
     quo: { ...base.quo, ...((settingsMap.get("quo") as object) ?? {}) },
     curator: {
       ...base.curator,
@@ -321,6 +352,74 @@ export async function getInternalDocumentUrl(path: string): Promise<string | nul
     return null;
   }
   return data.signedUrl;
+}
+
+// ---------------------------------------------------------------------------
+// Activity tracking (silent; admin-only reads)
+// ---------------------------------------------------------------------------
+
+/** Record a single activity event. Fire-and-forget — never throws. */
+export async function logActivity(
+  userId: string,
+  userEmail: string,
+  type: ActivityEvent["type"],
+  detail: string,
+  path: string
+): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase.from("activity_events").insert({
+      id: uid("act"),
+      user_id: userId,
+      user_email: userEmail,
+      type,
+      detail,
+      path,
+    });
+  } catch {
+    // Tracking must never disrupt the app.
+  }
+}
+
+/** Fetch recent activity (admin only via RLS). */
+export async function fetchActivity(sinceIso: string): Promise<ActivityEvent[]> {
+  const sb = db();
+  const { data, error } = await sb
+    .from("activity_events")
+    .select("*")
+    .gte("at", sinceIso)
+    .order("at", { ascending: true })
+    .limit(5000);
+  if (error) throw error;
+  return (data ?? []).map((r) => toActivity(r as Row));
+}
+
+// ---------------------------------------------------------------------------
+// Employee management (admin) via the manage-employee Edge Function
+// ---------------------------------------------------------------------------
+
+export interface InvitedEmployee {
+  employee: Employee;
+  tempPassword?: string;
+}
+
+/** Create a team member (admin only). Returns the new profile + temp password. */
+export async function createEmployee(input: {
+  email: string;
+  name: string;
+  role: Employee["role"];
+  permissions: SectionKey[];
+}): Promise<InvitedEmployee> {
+  const sb = db();
+  const { data, error } = await sb.functions.invoke("manage-employee", {
+    body: { action: "create", ...input },
+  });
+  if (error) throw error;
+  const res = data as { employee: Row; tempPassword?: string };
+  return {
+    employee: toEmployee(res.employee),
+    tempPassword: res.tempPassword,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -477,6 +576,27 @@ export async function persist(action: Action): Promise<void> {
         if (error) console.error("Failed to remove internal storage object", error);
       }
       await throwOn(sb.from("internal_documents").delete().eq("id", action.id));
+      return;
+
+    case "ADD_EMPLOYEE":
+      // Auth-user creation happens via the manage-employee Edge Function;
+      // the local state update is enough here.
+      return;
+    case "UPDATE_EMPLOYEE":
+      await throwOn(
+        sb
+          .from("employees")
+          .update({
+            name: action.employee.name,
+            role: action.employee.role,
+            permissions: action.employee.permissions,
+            active: action.employee.active,
+          })
+          .eq("id", action.employee.id)
+      );
+      return;
+    case "DELETE_EMPLOYEE":
+      await throwOn(sb.from("employees").delete().eq("id", action.id));
       return;
 
     case "SET_QUO":

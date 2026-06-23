@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import type { CategoryId } from "../types";
+import { useAuth } from "../store/AuthStore";
 import { CATEGORIES, categoryById } from "../lib/format";
 import { PageHeader } from "../components/PageHeader";
 import { Tabs } from "../components/Tabs";
@@ -24,9 +25,13 @@ function isCategory(id: string | undefined): id is CategoryId {
 
 export function CategoryPage() {
   const { categoryId } = useParams();
+  const { can } = useAuth();
   const [tab, setTab] = useState<TabId>("sales");
 
   if (!isCategory(categoryId)) {
+    return <Navigate to="/" replace />;
+  }
+  if (!can(categoryId)) {
     return <Navigate to="/" replace />;
   }
   const category = categoryById(categoryId);

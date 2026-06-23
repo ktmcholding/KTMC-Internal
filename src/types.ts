@@ -155,6 +155,45 @@ export interface InternalDocument {
   path?: string; // storage object path
 }
 
+/** Keys for the access-controllable areas of the site. */
+export type SectionKey =
+  | "dashboard"
+  | "formulation"
+  | "co-packing"
+  | "private-white-label"
+  | "our-brands"
+  | "software"
+  | "duties"
+  | "calendar"
+  | "documents"
+  | "curator"
+  | "quo"
+  | "team";
+
+export type EmployeeRole = "admin" | "employee";
+
+export interface Employee {
+  id: string; // auth user id (or local id in demo mode)
+  email: string;
+  name: string;
+  role: EmployeeRole;
+  /** Sections this employee may access (admins implicitly get everything). */
+  permissions: SectionKey[];
+  active: boolean;
+  createdAt: string; // ISO date
+}
+
+/** A single recorded activity event used for silent time/work tracking. */
+export interface ActivityEvent {
+  id: string;
+  userId: string;
+  userEmail: string;
+  type: "navigate" | "heartbeat" | "action";
+  detail: string;
+  path: string;
+  at: string; // ISO timestamp
+}
+
 export interface AppState {
   leads: Lead[];
   sales: SaleRecord[];
@@ -163,6 +202,7 @@ export interface AppState {
   tasks: Task[];
   events: CalendarEvent[];
   internalDocuments: InternalDocument[];
+  employees: Employee[];
   quo: QuoIntegrationConfig;
   curator: CuratorIntegrationConfig;
 }
