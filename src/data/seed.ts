@@ -28,6 +28,7 @@ export function emptyState(): AppState {
     events: [],
     internalDocuments: [],
     employees: [],
+    calls: [],
     quo: { ...defaultQuo },
     curator: { ...defaultCurator },
   };
@@ -188,6 +189,21 @@ export const seedState: AppState = {
       notes: "Standard NDA we send to suppliers.",
       uploadedAt: "2026-03-02",
       uploadedBy: "ktmcholding@gmail.com",
+    },
+  ],
+  calls: [
+    {
+      id: "call_1",
+      clientId: "cli_aurora",
+      phone: "+1 (415) 555-0142",
+      direction: "inbound",
+      summary:
+        "Dana called to check on the serum stability timeline and asked about scaling the formulation to 5,000 units. Agreed to send an updated quote by Friday.",
+      transcript: "",
+      recordingUrl: "",
+      durationSeconds: 372,
+      category: "formulation",
+      occurredAt: "2026-06-20T15:12:00Z",
     },
   ],
   employees: [

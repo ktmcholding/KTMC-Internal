@@ -1,6 +1,15 @@
 import { useState } from "react";
-import { Plus, Trash2, ChevronRight, ChevronDown } from "lucide-react";
-import type { CategoryId, Client, ClientDocument } from "../../types";
+import {
+  Plus,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  Phone,
+  PhoneIncoming,
+  PhoneOutgoing,
+  PlayCircle,
+} from "lucide-react";
+import type { CallRecord, CategoryId, Client, ClientDocument } from "../../types";
 import { useStore } from "../../store/AppStore";
 import { StatCard } from "../../components/StatCard";
 import { Modal } from "../../components/Modal";
@@ -10,7 +19,7 @@ import { isSupabaseConfigured } from "../../lib/supabase";
 import { getDocumentUrl, uploadClientDocuments } from "../../lib/api";
 
 export function ClientsSection({ category }: { category: CategoryId }) {
-  const { clientsByCategory, dispatch } = useStore();
+  const { clientsByCategory, dispatch, state } = useStore();
   const clients = clientsByCategory(category);
   const [showAdd, setShowAdd] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(clients[0]?.id ?? null);
@@ -151,6 +160,14 @@ export function ClientsSection({ category }: { category: CategoryId }) {
                           />
                         </div>
                       </div>
+
+                      <CallTimeline
+                        calls={state.calls
+                          .filter((cl) => cl.clientId === c.id)
+                          .sort((a, b) =>
+                            b.occurredAt.localeCompare(a.occurredAt)
+                          )}
+                      />
                     </div>
                   )}
                 </li>
@@ -166,6 +183,75 @@ export function ClientsSection({ category }: { category: CategoryId }) {
           onClose={() => setShowAdd(false)}
           onCreated={(id) => setExpanded(id)}
         />
+      )}
+    </div>
+  );
+}
+
+function formatDuration(seconds: number): string {
+  if (!seconds) return "";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function CallTimeline({ calls }: { calls: CallRecord[] }) {
+  return (
+    <div className="mt-5">
+      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <Phone size={13} /> Call history ({calls.length})
+      </h3>
+      {calls.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-4 text-center text-xs text-gray-400">
+          No calls recorded yet. QUO call summaries for this client appear here
+          automatically.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {calls.map((call) => (
+            <li
+              key={call.id}
+              className="rounded-lg border border-gray-200 bg-white p-3"
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                  {call.direction === "outbound" ? (
+                    <PhoneOutgoing size={13} className="text-brand-500" />
+                  ) : (
+                    <PhoneIncoming size={13} className="text-emerald-500" />
+                  )}
+                  {call.direction === "outbound" ? "Outbound" : "Inbound"} call
+                  {call.durationSeconds > 0 && (
+                    <span className="text-gray-400">
+                      · {formatDuration(call.durationSeconds)}
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {new Date(call.occurredAt).toLocaleString([], {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+              <p className="text-sm text-gray-700">
+                {call.summary || "(No summary provided)"}
+              </p>
+              {call.recordingUrl && (
+                <a
+                  href={call.recordingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+                >
+                  <PlayCircle size={14} /> Listen to recording
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

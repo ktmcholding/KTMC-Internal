@@ -3,6 +3,7 @@ import type {
   CalendarEvent,
   Client,
   ClientDocument,
+  CallRecord,
   CuratorIntegrationConfig,
   Employee,
   InternalDocument,
@@ -43,6 +44,8 @@ export type Action =
   | { type: "ADD_EMPLOYEE"; employee: Employee }
   | { type: "UPDATE_EMPLOYEE"; employee: Employee }
   | { type: "DELETE_EMPLOYEE"; id: string }
+  | { type: "ADD_CALL"; call: CallRecord }
+  | { type: "DELETE_CALL"; id: string }
   | { type: "SET_QUO"; config: QuoIntegrationConfig }
   | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
   | { type: "RESET" };

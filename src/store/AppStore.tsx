@@ -13,7 +13,7 @@ import type { AppState, CategoryId, Client, Invoice, Lead } from "../types";
 import type { Action } from "./actions";
 import { emptyState, seedState } from "../data/seed";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
-import { fetchAll, logActivity, persist, toLead } from "../lib/api";
+import { fetchAll, logActivity, persist, toCall, toLead } from "../lib/api";
 import { useAuth } from "./AuthStore";
 
 /** Human-readable label for an action, used in the silent activity log. */
@@ -42,6 +42,8 @@ function describeAction(action: Action): string | null {
     case "ADD_EMPLOYEE": return "Added a team member";
     case "UPDATE_EMPLOYEE": return "Updated a team member";
     case "DELETE_EMPLOYEE": return "Removed a team member";
+    case "ADD_CALL": return "Logged a call";
+    case "DELETE_CALL": return "Deleted a call";
     default: return null;
   }
 }
@@ -174,6 +176,19 @@ function reducer(state: AppState, action: Action): AppState {
         employees: state.employees.filter((e) => e.id !== action.id),
       };
 
+    case "ADD_CALL":
+      if (state.calls.some((c) => c.id === action.call.id)) {
+        return {
+          ...state,
+          calls: state.calls.map((c) =>
+            c.id === action.call.id ? action.call : c
+          ),
+        };
+      }
+      return { ...state, calls: [action.call, ...state.calls] };
+    case "DELETE_CALL":
+      return { ...state, calls: state.calls.filter((c) => c.id !== action.id) };
+
     case "SET_QUO":
       return { ...state, quo: action.config };
     case "SET_CURATOR":
@@ -276,7 +291,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured || !supabase || !user) return;
     const sb = supabase;
     const channel = sb
-      .channel("leads-changes")
+      .channel("quo-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "leads" },
@@ -286,6 +301,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             if (id) rawDispatch({ type: "DELETE_LEAD", id });
           } else {
             rawDispatch({ type: "ADD_LEAD", lead: toLead(payload.new) });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calls" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const id = (payload.old as { id?: string }).id;
+            if (id) rawDispatch({ type: "DELETE_CALL", id });
+          } else {
+            rawDispatch({ type: "ADD_CALL", call: toCall(payload.new) });
           }
         }
       )

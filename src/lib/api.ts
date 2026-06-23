@@ -9,6 +9,7 @@ import type {
   ActivityEvent,
   AppState,
   CalendarEvent,
+  CallRecord,
   Client,
   ClientDocument,
   Employee,
@@ -126,6 +127,21 @@ function toTask(r: Row): Task {
   };
 }
 
+export function toCall(r: Row): CallRecord {
+  return {
+    id: str(r.id),
+    clientId: r.client_id ? str(r.client_id) : undefined,
+    phone: str(r.phone),
+    direction: (r.direction as CallRecord["direction"]) ?? "inbound",
+    summary: str(r.summary),
+    transcript: str(r.transcript),
+    recordingUrl: str(r.recording_url),
+    durationSeconds: num(r.duration_seconds),
+    category: (r.category as CallRecord["category"]) || undefined,
+    occurredAt: str(r.occurred_at),
+  };
+}
+
 function toEmployee(r: Row): Employee {
   return {
     id: str(r.id),
@@ -193,6 +209,7 @@ export async function fetchAll(): Promise<AppState> {
     settingsRes,
     internalDocsRes,
     employeesRes,
+    callsRes,
   ] = await Promise.all([
     sb.from("clients").select("*"),
     sb.from("documents").select("*"),
@@ -205,6 +222,7 @@ export async function fetchAll(): Promise<AppState> {
     sb.from("settings").select("*"),
     sb.from("internal_documents").select("*"),
     sb.from("employees").select("*"),
+    sb.from("calls").select("*"),
   ]);
 
   const firstError =
@@ -218,7 +236,8 @@ export async function fetchAll(): Promise<AppState> {
     eventsRes.error ||
     settingsRes.error ||
     internalDocsRes.error ||
-    employeesRes.error;
+    employeesRes.error ||
+    callsRes.error;
   if (firstError) throw firstError;
 
   const docsByClient = new Map<string, ClientDocument[]>();
@@ -258,6 +277,7 @@ export async function fetchAll(): Promise<AppState> {
       toInternalDocument(r as Row)
     ),
     employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
+    calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
     quo: { ...base.quo, ...((settingsMap.get("quo") as object) ?? {}) },
     curator: {
       ...base.curator,
@@ -597,6 +617,28 @@ export async function persist(action: Action): Promise<void> {
       return;
     case "DELETE_EMPLOYEE":
       await throwOn(sb.from("employees").delete().eq("id", action.id));
+      return;
+
+    case "ADD_CALL": {
+      const c = action.call;
+      await throwOn(
+        sb.from("calls").insert({
+          id: c.id,
+          client_id: c.clientId ?? null,
+          phone: c.phone,
+          direction: c.direction,
+          summary: c.summary,
+          transcript: c.transcript,
+          recording_url: c.recordingUrl,
+          duration_seconds: c.durationSeconds,
+          category: c.category ?? null,
+          occurred_at: c.occurredAt,
+        })
+      );
+      return;
+    }
+    case "DELETE_CALL":
+      await throwOn(sb.from("calls").delete().eq("id", action.id));
       return;
 
     case "SET_QUO":

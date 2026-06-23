@@ -92,6 +92,20 @@ export interface Client {
   createdAt: string; // ISO date
 }
 
+/** A recorded/summarized phone call (e.g. from QUO), tied to a client. */
+export interface CallRecord {
+  id: string;
+  clientId?: string; // matched client, if any
+  phone: string;
+  direction: "inbound" | "outbound";
+  summary: string;
+  transcript: string;
+  recordingUrl: string;
+  durationSeconds: number;
+  category?: CategoryId;
+  occurredAt: string; // ISO timestamp
+}
+
 export type TaskStatus = "todo" | "in-progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 
@@ -203,6 +217,7 @@ export interface AppState {
   events: CalendarEvent[];
   internalDocuments: InternalDocument[];
   employees: Employee[];
+  calls: CallRecord[];
   quo: QuoIntegrationConfig;
   curator: CuratorIntegrationConfig;
 }
