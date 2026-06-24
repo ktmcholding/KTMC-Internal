@@ -59,6 +59,7 @@ function demoProfile(user: AuthUser): Employee {
     email: user.email,
     name: user.name,
     role: "admin",
+    title: "Admin",
     permissions: [],
     active: true,
     createdAt: new Date().toISOString().slice(0, 10),
@@ -86,14 +87,14 @@ async function ensureProfile(user: AuthUser): Promise<Employee | null> {
   };
   const asAdmin = await supabase
     .from("employees")
-    .insert({ ...base, role: "admin", permissions: [] })
+    .insert({ ...base, role: "admin", title: "Admin", permissions: [] })
     .select()
     .maybeSingle();
   if (asAdmin.data) return rowToEmployee(asAdmin.data);
 
   const asEmployee = await supabase
     .from("employees")
-    .insert({ ...base, role: "employee", permissions: [] })
+    .insert({ ...base, role: "employee", title: "", permissions: [] })
     .select()
     .maybeSingle();
   if (asEmployee.data) return rowToEmployee(asEmployee.data);
@@ -107,6 +108,7 @@ function rowToEmployee(r: Record<string, unknown>): Employee {
     email: String(r.email ?? ""),
     name: String(r.name ?? ""),
     role: (r.role as Employee["role"]) ?? "employee",
+    title: String(r.title ?? ""),
     permissions: (r.permissions as SectionKey[]) ?? [],
     active: Boolean(r.active),
     createdAt: String(r.created_at ?? ""),

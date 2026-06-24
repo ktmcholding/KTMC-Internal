@@ -149,6 +149,7 @@ function toEmployee(r: Row): Employee {
     email: str(r.email),
     name: str(r.name),
     role: (r.role as Employee["role"]) ?? "employee",
+    title: str(r.title),
     permissions: (r.permissions as SectionKey[]) ?? [],
     active: Boolean(r.active),
     createdAt: str(r.created_at),
@@ -278,6 +279,7 @@ export async function fetchAll(): Promise<AppState> {
       toInternalDocument(r as Row)
     ),
     employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
+    roles: (settingsMap.get("roles") as AppState["roles"] | undefined) ?? [],
     calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
     emailExamples:
       (settingsMap.get("email_examples") as EmailExample[] | undefined) ?? [],
@@ -431,6 +433,7 @@ export async function createEmployee(input: {
   email: string;
   name: string;
   role: Employee["role"];
+  title: string;
   permissions: SectionKey[];
 }): Promise<InvitedEmployee> {
   const sb = db();
@@ -639,6 +642,7 @@ export async function persist(action: Action): Promise<void> {
           .update({
             name: action.employee.name,
             role: action.employee.role,
+            title: action.employee.title,
             permissions: action.employee.permissions,
             active: action.employee.active,
           })
@@ -647,6 +651,11 @@ export async function persist(action: Action): Promise<void> {
       return;
     case "DELETE_EMPLOYEE":
       await throwOn(sb.from("employees").delete().eq("id", action.id));
+      return;
+    case "SET_ROLES":
+      await throwOn(
+        sb.from("settings").upsert({ key: "roles", value: action.roles })
+      );
       return;
 
     case "ADD_CALL": {

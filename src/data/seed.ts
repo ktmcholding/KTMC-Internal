@@ -28,6 +28,7 @@ export function emptyState(): AppState {
     events: [],
     internalDocuments: [],
     employees: [],
+    roles: [],
     calls: [],
     emailExamples: [],
     quo: { ...defaultQuo },
@@ -221,6 +222,7 @@ export const seedState: AppState = {
       email: "ktmcholding@gmail.com",
       name: "KTMC Owner",
       role: "admin",
+      title: "Admin",
       permissions: [],
       active: true,
       createdAt: "2025-06-01",
@@ -230,9 +232,27 @@ export const seedState: AppState = {
       email: "sales@ktmc.com",
       name: "Sample Employee",
       role: "employee",
+      title: "Sales Rep",
       permissions: ["formulation", "co-packing", "calendar", "quo"],
       active: true,
       createdAt: "2026-02-01",
+    },
+  ],
+  roles: [
+    {
+      id: "role_sales",
+      name: "Sales Rep",
+      permissions: ["formulation", "co-packing", "our-brands", "calendar", "quo"],
+    },
+    {
+      id: "role_ops",
+      name: "Operations",
+      permissions: ["co-packing", "private-white-label", "duties", "calendar", "documents"],
+    },
+    {
+      id: "role_finance",
+      name: "Finance",
+      permissions: ["formulation", "co-packing", "private-white-label", "our-brands", "software"],
     },
   ],
   quo: {

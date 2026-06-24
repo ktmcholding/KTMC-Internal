@@ -42,6 +42,7 @@ function describeAction(action: Action): string | null {
     case "ADD_EMPLOYEE": return "Added a team member";
     case "UPDATE_EMPLOYEE": return "Updated a team member";
     case "DELETE_EMPLOYEE": return "Removed a team member";
+    case "SET_ROLES": return "Updated team roles";
     case "ADD_CALL": return "Logged a call";
     case "DELETE_CALL": return "Deleted a call";
     case "SET_EMAIL_EXAMPLES": return "Updated email writing samples";
@@ -176,6 +177,8 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         employees: state.employees.filter((e) => e.id !== action.id),
       };
+    case "SET_ROLES":
+      return { ...state, roles: action.roles };
 
     case "ADD_CALL":
       if (state.calls.some((c) => c.id === action.call.id)) {

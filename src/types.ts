@@ -191,13 +191,24 @@ export type SectionKey =
   | "quo"
   | "team";
 
+/** Access level. 'admin' has full access and can manage the team. */
 export type EmployeeRole = "admin" | "employee";
+
+/** A custom, admin-defined role: a named bundle of section permissions. */
+export interface Role {
+  id: string;
+  name: string;
+  permissions: SectionKey[];
+}
 
 export interface Employee {
   id: string; // auth user id (or local id in demo mode)
   email: string;
   name: string;
+  /** Access level used for admin privileges (kept for security/RLS). */
   role: EmployeeRole;
+  /** Display label / job title (e.g. the assigned custom role's name). */
+  title: string;
   /** Sections this employee may access (admins implicitly get everything). */
   permissions: SectionKey[];
   active: boolean;
@@ -224,6 +235,7 @@ export interface AppState {
   events: CalendarEvent[];
   internalDocuments: InternalDocument[];
   employees: Employee[];
+  roles: Role[];
   calls: CallRecord[];
   emailExamples: EmailExample[];
   quo: QuoIntegrationConfig;

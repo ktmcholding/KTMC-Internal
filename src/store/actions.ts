@@ -11,6 +11,7 @@ import type {
   Invoice,
   Lead,
   QuoIntegrationConfig,
+  Role,
   SaleRecord,
   Task,
 } from "../types";
@@ -45,6 +46,7 @@ export type Action =
   | { type: "ADD_EMPLOYEE"; employee: Employee }
   | { type: "UPDATE_EMPLOYEE"; employee: Employee }
   | { type: "DELETE_EMPLOYEE"; id: string }
+  | { type: "SET_ROLES"; roles: Role[] }
   | { type: "ADD_CALL"; call: CallRecord }
   | { type: "DELETE_CALL"; id: string }
   | { type: "SET_EMAIL_EXAMPLES"; examples: EmailExample[] }

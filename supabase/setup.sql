@@ -342,3 +342,9 @@ exception
   when undefined_object then
     create publication supabase_realtime for table calls;
 end $$;
+
+-- =============================================================
+-- supabase/migrations/0006_employee_title.sql
+-- =============================================================
+-- Add a display title / role label to employees (custom roles).
+alter table employees add column if not exists title text not null default '';

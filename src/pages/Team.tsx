@@ -8,8 +8,10 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Settings,
+  Trash2,
 } from "lucide-react";
-import type { ActivityEvent, Employee, SectionKey } from "../types";
+import type { ActivityEvent, Employee, Role, SectionKey } from "../types";
 import { useStore } from "../store/AppStore";
 import { useAuth } from "../store/AuthStore";
 import { PageHeader } from "../components/PageHeader";
@@ -49,6 +51,7 @@ export function Team() {
 function MembersTab() {
   const { state, dispatch } = useStore();
   const [showAdd, setShowAdd] = useState(false);
+  const [showRoles, setShowRoles] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
 
   return (
@@ -56,9 +59,14 @@ function MembersTab() {
       <div className="card">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <h2 className="text-sm font-semibold text-gray-900">Team members</h2>
-          <button className="btn-primary" onClick={() => setShowAdd(true)}>
-            <Plus size={16} /> Add member
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="btn-secondary" onClick={() => setShowRoles(true)}>
+              <Settings size={16} /> Manage roles
+            </button>
+            <button className="btn-primary" onClick={() => setShowAdd(true)}>
+              <Plus size={16} /> Add member
+            </button>
+          </div>
         </div>
         <ul className="divide-y divide-gray-100">
           {state.employees.map((e) => (
@@ -97,13 +105,13 @@ function MembersTab() {
                       }`}
                 </span>
                 <span
-                  className={`badge capitalize ${
+                  className={`badge ${
                     e.role === "admin"
                       ? "bg-brand-100 text-brand-700"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
-                  {e.role}
+                  {e.title || (e.role === "admin" ? "Admin" : "Employee")}
                 </span>
                 <button
                   className="btn-secondary px-2.5 py-1 text-xs"
@@ -118,6 +126,7 @@ function MembersTab() {
       </div>
 
       {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} />}
+      {showRoles && <RoleManagerModal onClose={() => setShowRoles(false)} />}
       {editing && (
         <EditMemberModal
           employee={editing}
@@ -133,6 +142,54 @@ function MembersTab() {
         />
       )}
     </div>
+  );
+}
+
+/** Dropdown to pick Admin, a custom role, or "Custom" manual access. */
+function RoleSelect({
+  roles,
+  role,
+  title,
+  disabled,
+  onPick,
+}: {
+  roles: Role[];
+  role: Employee["role"];
+  title: string;
+  disabled?: boolean;
+  onPick: (p: {
+    role: Employee["role"];
+    title: string;
+    permissions?: SectionKey[];
+  }) => void;
+}) {
+  const current =
+    role === "admin"
+      ? "admin"
+      : roles.find((r) => r.name === title)?.id ?? "__custom";
+  return (
+    <select
+      className="input"
+      value={current}
+      disabled={disabled}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === "admin") onPick({ role: "admin", title: "Admin", permissions: [] });
+        else if (v === "__custom") onPick({ role: "employee", title: "" });
+        else {
+          const r = roles.find((x) => x.id === v);
+          if (r) onPick({ role: "employee", title: r.name, permissions: r.permissions });
+        }
+      }}
+    >
+      <option value="admin">Admin (full access)</option>
+      {roles.map((r) => (
+        <option key={r.id} value={r.id}>
+          {r.name}
+        </option>
+      ))}
+      <option value="__custom">Custom (set sections manually)</option>
+    </select>
   );
 }
 
@@ -172,10 +229,11 @@ function PermissionPicker({
 }
 
 function AddMemberModal({ onClose }: { onClose: () => void }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<Employee["role"]>("employee");
+  const [title, setTitle] = useState("");
   const [permissions, setPermissions] = useState<SectionKey[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -201,6 +259,7 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
           email: email.trim(),
           name: name.trim(),
           role,
+          title,
           permissions,
         });
         dispatch({ type: "ADD_EMPLOYEE", employee: res.employee });
@@ -215,6 +274,7 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
           email: email.trim(),
           name: name.trim() || email.split("@")[0],
           role,
+          title: title || (role === "admin" ? "Admin" : ""),
           permissions,
           active: true,
           createdAt: new Date().toISOString().slice(0, 10),
@@ -311,14 +371,19 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label className="label">Role</label>
-          <select
-            className="input"
-            value={role}
-            onChange={(e) => setRole(e.target.value as Employee["role"])}
-          >
-            <option value="employee">Employee</option>
-            <option value="admin">Admin (full access)</option>
-          </select>
+          <RoleSelect
+            roles={state.roles}
+            role={role}
+            title={title}
+            onPick={(p) => {
+              setRole(p.role);
+              setTitle(p.title);
+              if (p.permissions) setPermissions(p.permissions);
+            }}
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            Picking a role pre-fills the sections below — you can still adjust them.
+          </p>
         </div>
         <div>
           <label className="label">Section access</label>
@@ -341,6 +406,7 @@ function EditMemberModal({
   onRemove: (id: string) => void;
 }) {
   const { user } = useAuth();
+  const { state } = useStore();
   const [draft, setDraft] = useState<Employee>(employee);
   const isSelf = user?.id === employee.id;
 
@@ -389,17 +455,20 @@ function EditMemberModal({
           </div>
           <div>
             <label className="label">Role</label>
-            <select
-              className="input"
-              value={draft.role}
+            <RoleSelect
+              roles={state.roles}
+              role={draft.role}
+              title={draft.title}
               disabled={isSelf}
-              onChange={(e) =>
-                setDraft({ ...draft, role: e.target.value as Employee["role"] })
+              onPick={(p) =>
+                setDraft((d) => ({
+                  ...d,
+                  role: p.role,
+                  title: p.title,
+                  permissions: p.permissions ?? d.permissions,
+                }))
               }
-            >
-              <option value="employee">Employee</option>
-              <option value="admin">Admin (full access)</option>
-            </select>
+            />
           </div>
         </div>
         <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -420,6 +489,114 @@ function EditMemberModal({
           />
         </div>
       </div>
+    </Modal>
+  );
+}
+
+function RoleManagerModal({ onClose }: { onClose: () => void }) {
+  const { state, dispatch } = useStore();
+  const [roles, setRoles] = useState<Role[]>(state.roles);
+
+  function update(id: string, patch: Partial<Role>) {
+    setRoles((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+  function toggle(id: string, key: SectionKey) {
+    setRoles((rs) =>
+      rs.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              permissions: r.permissions.includes(key)
+                ? r.permissions.filter((k) => k !== key)
+                : [...r.permissions, key],
+            }
+          : r
+      )
+    );
+  }
+
+  return (
+    <Modal
+      open
+      wide
+      title="Manage roles"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              dispatch({
+                type: "SET_ROLES",
+                roles: roles.filter((r) => r.name.trim()),
+              });
+              onClose();
+            }}
+          >
+            Save roles
+          </button>
+        </>
+      }
+    >
+      <p className="mb-3 text-sm text-gray-500">
+        A role is a named set of sections. When you assign it to a team member,
+        they get exactly those sections — and you can still tweak per person.
+      </p>
+      <div className="space-y-3">
+        {roles.length === 0 && (
+          <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-sm text-gray-400">
+            No roles yet. Add one below.
+          </p>
+        )}
+        {roles.map((r) => (
+          <div key={r.id} className="rounded-lg border border-gray-200 p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <input
+                className="input flex-1"
+                value={r.name}
+                placeholder="Role name (e.g. Sales Rep)"
+                onChange={(e) => update(r.id, { name: e.target.value })}
+              />
+              <button
+                className="text-gray-400 hover:text-red-500"
+                onClick={() => setRoles((rs) => rs.filter((x) => x.id !== r.id))}
+                aria-label="Delete role"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {ASSIGNABLE_SECTIONS.map((s) => (
+                <label
+                  key={s.key}
+                  className="flex items-center gap-2 rounded-md border border-gray-200 px-2 py-1.5 text-xs"
+                >
+                  <input
+                    type="checkbox"
+                    checked={r.permissions.includes(s.key)}
+                    onChange={() => toggle(r.id, s.key)}
+                  />
+                  {s.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        className="btn-secondary mt-3"
+        onClick={() =>
+          setRoles((rs) => [
+            ...rs,
+            { id: uid("role"), name: "", permissions: [] },
+          ])
+        }
+      >
+        <Plus size={15} /> Add role
+      </button>
     </Modal>
   );
 }

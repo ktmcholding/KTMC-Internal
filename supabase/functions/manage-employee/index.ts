@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
   const email = String(payload.email ?? "").trim();
   const name = String(payload.name ?? "").trim();
   const role = payload.role === "admin" ? "admin" : "employee";
+  const title = String(payload.title ?? "").trim();
   const permissions = Array.isArray(payload.permissions) ? payload.permissions : [];
   if (!email) return json(400, { error: "Email is required" });
 
@@ -93,6 +94,7 @@ Deno.serve(async (req) => {
     email,
     name: name || email.split("@")[0],
     role,
+    title: title || (role === "admin" ? "Admin" : ""),
     permissions,
     active: true,
     created_at: new Date().toISOString().slice(0, 10),
