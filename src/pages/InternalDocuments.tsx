@@ -1,28 +1,40 @@
 import { useMemo, useState } from "react";
-import { FileText, Trash2, Download, FolderClosed } from "lucide-react";
 import {
-  INTERNAL_DOC_FOLDERS,
-  type InternalDocFolder,
-  type InternalDocument,
-} from "../types";
+  FileText,
+  Trash2,
+  Download,
+  FolderClosed,
+  Settings,
+  Plus,
+} from "lucide-react";
+import type { DocFolder, InternalDocFolder, InternalDocument } from "../types";
 import { useStore } from "../store/AppStore";
 import { useAuth } from "../store/AuthStore";
 import { PageHeader } from "../components/PageHeader";
 import { DocumentDropzone } from "../components/DocumentDropzone";
 import { StatCard } from "../components/StatCard";
+import { Modal } from "../components/Modal";
 import { formatBytes, formatDate, uid } from "../lib/format";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { getInternalDocumentUrl, uploadInternalDocuments } from "../lib/api";
 
 export function InternalDocuments() {
   const { state, dispatch } = useStore();
-  const { user } = useAuth();
-  const [folder, setFolder] = useState<InternalDocFolder>("general");
+  const { user, isAdmin } = useAuth();
+  const folders = state.docFolders;
+  const [folder, setFolder] = useState<InternalDocFolder>(
+    folders[0]?.id ?? "general"
+  );
+  const [editFolders, setEditFolders] = useState(false);
 
   const docs = state.internalDocuments;
+  // Fall back to the first folder if the selected one was removed.
+  const activeFolder =
+    folders.find((f) => f.id === folder) ?? folders[0];
+  const activeId = activeFolder?.id ?? "general";
   const inFolder = useMemo(
-    () => docs.filter((d) => d.folder === folder),
-    [docs, folder]
+    () => docs.filter((d) => d.folder === activeId),
+    [docs, activeId]
   );
 
   const totalSize = docs.reduce((s, d) => s + d.size, 0);
@@ -31,14 +43,14 @@ export function InternalDocuments() {
     const uploadedBy = user?.email ?? "unknown";
     let newDocs: InternalDocument[];
     if (isSupabaseConfigured) {
-      newDocs = await uploadInternalDocuments(files, folder, uploadedBy);
+      newDocs = await uploadInternalDocuments(files, activeId, uploadedBy);
     } else {
       newDocs = files.map((f) => ({
         id: uid("idoc"),
         name: f.name,
         size: f.size,
         type: f.type || "application/octet-stream",
-        folder,
+        folder: activeId,
         notes: "",
         uploadedAt: new Date().toISOString().slice(0, 10),
         uploadedBy,
@@ -57,20 +69,16 @@ export function InternalDocuments() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Documents" value={String(docs.length)} tone="brand" />
         <StatCard label="Total size" value={formatBytes(totalSize)} tone="default" />
-        <StatCard
-          label="Folders"
-          value={String(INTERNAL_DOC_FOLDERS.length)}
-          tone="default"
-        />
+        <StatCard label="Folders" value={String(folders.length)} tone="default" />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Folder rail */}
         <div className="card h-fit p-2">
           <nav className="space-y-0.5">
-            {INTERNAL_DOC_FOLDERS.map((f) => {
+            {folders.map((f) => {
               const count = docs.filter((d) => d.folder === f.id).length;
-              const active = folder === f.id;
+              const active = activeId === f.id;
               return (
                 <button
                   key={f.id}
@@ -81,34 +89,37 @@ export function InternalDocuments() {
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <FolderClosed size={16} /> {f.label}
+                  <span className="flex items-center gap-2 truncate">
+                    <FolderClosed size={16} className="shrink-0" /> {f.name}
                   </span>
                   <span className="text-xs text-gray-400">{count}</span>
                 </button>
               );
             })}
           </nav>
+          {isAdmin && (
+            <button
+              className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100"
+              onClick={() => setEditFolders(true)}
+            >
+              <Settings size={15} /> Edit folders
+            </button>
+          )}
         </div>
 
         {/* Folder contents */}
         <div className="lg:col-span-3">
           <div className="card p-5">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">
-              Upload to{" "}
-              {INTERNAL_DOC_FOLDERS.find((f) => f.id === folder)?.label}
+              Upload to {activeFolder?.name ?? "folder"}
             </h2>
-            <DocumentDropzone
-              documents={[]}
-              onAdd={handleAdd}
-            />
+            <DocumentDropzone documents={[]} onAdd={handleAdd} />
           </div>
 
           <div className="card mt-6">
             <div className="border-b border-gray-200 px-5 py-3">
               <h2 className="text-sm font-semibold text-gray-900">
-                {INTERNAL_DOC_FOLDERS.find((f) => f.id === folder)?.label} documents (
-                {inFolder.length})
+                {activeFolder?.name ?? "Folder"} documents ({inFolder.length})
               </h2>
             </div>
             {inFolder.length === 0 ? (
@@ -135,6 +146,28 @@ export function InternalDocuments() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pl-3">
+                      {/* Move to another folder */}
+                      <select
+                        className="rounded border border-gray-200 bg-white px-1.5 py-1 text-xs"
+                        value={d.folder}
+                        title="Move to another folder"
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          if (next !== d.folder) {
+                            dispatch({
+                              type: "MOVE_INTERNAL_DOC",
+                              id: d.id,
+                              folder: next,
+                            });
+                          }
+                        }}
+                      >
+                        {folders.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
                       {isSupabaseConfigured && d.path && (
                         <button
                           className="btn-ghost p-2"
@@ -168,6 +201,97 @@ export function InternalDocuments() {
           </div>
         </div>
       </div>
+
+      {editFolders && (
+        <FolderManagerModal onClose={() => setEditFolders(false)} />
+      )}
     </div>
+  );
+}
+
+function FolderManagerModal({ onClose }: { onClose: () => void }) {
+  const { state, dispatch } = useStore();
+  const [folders, setFolders] = useState<DocFolder[]>(state.docFolders);
+
+  const countFor = (id: string) =>
+    state.internalDocuments.filter((d) => d.folder === id).length;
+
+  return (
+    <Modal
+      open
+      title="Edit folders"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              dispatch({
+                type: "SET_DOC_FOLDERS",
+                folders: folders.filter((f) => f.name.trim()),
+              });
+              onClose();
+            }}
+          >
+            Save folders
+          </button>
+        </>
+      }
+    >
+      <p className="mb-3 text-sm text-gray-500">
+        Rename a folder by editing its name, add new ones, or remove empty
+        folders.
+      </p>
+      <div className="space-y-2">
+        {folders.map((f) => {
+          const count = countFor(f.id);
+          return (
+            <div key={f.id} className="flex items-center gap-2">
+              <FolderClosed size={16} className="shrink-0 text-gray-400" />
+              <input
+                className="input flex-1"
+                value={f.name}
+                placeholder="Folder name"
+                onChange={(e) =>
+                  setFolders((fs) =>
+                    fs.map((x) =>
+                      x.id === f.id ? { ...x, name: e.target.value } : x
+                    )
+                  )
+                }
+              />
+              <span className="w-16 text-right text-xs text-gray-400">
+                {count} doc{count === 1 ? "" : "s"}
+              </span>
+              <button
+                className="text-gray-400 hover:text-red-500 disabled:opacity-30"
+                disabled={count > 0}
+                title={
+                  count > 0
+                    ? "Move or delete its documents first"
+                    : "Delete folder"
+                }
+                onClick={() =>
+                  setFolders((fs) => fs.filter((x) => x.id !== f.id))
+                }
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        className="btn-secondary mt-3"
+        onClick={() =>
+          setFolders((fs) => [...fs, { id: uid("fld"), name: "" }])
+        }
+      >
+        <Plus size={15} /> Add folder
+      </button>
+    </Modal>
   );
 }

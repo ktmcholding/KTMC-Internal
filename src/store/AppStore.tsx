@@ -39,6 +39,8 @@ function describeAction(action: Action): string | null {
     case "DELETE_EVENT": return "Deleted a calendar event";
     case "ADD_INTERNAL_DOCS": return "Uploaded internal document(s)";
     case "DELETE_INTERNAL_DOC": return "Deleted an internal document";
+    case "MOVE_INTERNAL_DOC": return "Moved an internal document";
+    case "SET_DOC_FOLDERS": return "Updated document folders";
     case "ADD_EMPLOYEE": return "Added a team member";
     case "UPDATE_EMPLOYEE": return "Updated a team member";
     case "DELETE_EMPLOYEE": return "Removed a team member";
@@ -154,6 +156,15 @@ function reducer(state: AppState, action: Action): AppState {
           (d) => d.id !== action.id
         ),
       };
+    case "MOVE_INTERNAL_DOC":
+      return {
+        ...state,
+        internalDocuments: state.internalDocuments.map((d) =>
+          d.id === action.id ? { ...d, folder: action.folder } : d
+        ),
+      };
+    case "SET_DOC_FOLDERS":
+      return { ...state, docFolders: action.folders };
 
     case "ADD_EMPLOYEE":
       if (state.employees.some((e) => e.id === action.employee.id)) {

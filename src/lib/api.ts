@@ -3,6 +3,7 @@ import {
   DOCUMENTS_BUCKET,
   INTERNAL_DOCUMENTS_BUCKET,
 } from "./supabase";
+import { DEFAULT_DOC_FOLDERS } from "../types";
 import type { Action } from "../store/actions";
 import { emptyState } from "../data/seed";
 import type {
@@ -278,6 +279,9 @@ export async function fetchAll(): Promise<AppState> {
     internalDocuments: (internalDocsRes.data ?? []).map((r) =>
       toInternalDocument(r as Row)
     ),
+    docFolders:
+      (settingsMap.get("doc_folders") as AppState["docFolders"] | undefined) ??
+      DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
     employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
     roles: (settingsMap.get("roles") as AppState["roles"] | undefined) ?? [],
     calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
@@ -629,6 +633,19 @@ export async function persist(action: Action): Promise<void> {
         if (error) console.error("Failed to remove internal storage object", error);
       }
       await throwOn(sb.from("internal_documents").delete().eq("id", action.id));
+      return;
+    case "MOVE_INTERNAL_DOC":
+      await throwOn(
+        sb
+          .from("internal_documents")
+          .update({ folder: action.folder })
+          .eq("id", action.id)
+      );
+      return;
+    case "SET_DOC_FOLDERS":
+      await throwOn(
+        sb.from("settings").upsert({ key: "doc_folders", value: action.folders })
+      );
       return;
 
     case "ADD_EMPLOYEE":

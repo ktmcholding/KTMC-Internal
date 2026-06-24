@@ -1,4 +1,5 @@
 import type { AppState } from "../types";
+import { DEFAULT_DOC_FOLDERS } from "../types";
 
 /** Default integration config used by both demo and backend modes. */
 const defaultQuo: AppState["quo"] = {
@@ -27,6 +28,7 @@ export function emptyState(): AppState {
     tasks: [],
     events: [],
     internalDocuments: [],
+    docFolders: DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
     employees: [],
     roles: [],
     calls: [],
@@ -193,6 +195,7 @@ export const seedState: AppState = {
       uploadedBy: "ktmcholding@gmail.com",
     },
   ],
+  docFolders: DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
   emailExamples: [
     {
       id: "ex_1",

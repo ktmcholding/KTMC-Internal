@@ -5,6 +5,7 @@ import type {
   ClientDocument,
   CallRecord,
   CuratorIntegrationConfig,
+  DocFolder,
   EmailExample,
   Employee,
   InternalDocument,
@@ -43,6 +44,8 @@ export type Action =
   | { type: "DELETE_EVENT"; id: string }
   | { type: "ADD_INTERNAL_DOCS"; documents: InternalDocument[] }
   | { type: "DELETE_INTERNAL_DOC"; id: string; path?: string }
+  | { type: "MOVE_INTERNAL_DOC"; id: string; folder: string }
+  | { type: "SET_DOC_FOLDERS"; folders: DocFolder[] }
   | { type: "ADD_EMPLOYEE"; employee: Employee }
   | { type: "UPDATE_EMPLOYEE"; employee: Employee }
   | { type: "DELETE_EMPLOYEE"; id: string }

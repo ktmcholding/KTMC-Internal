@@ -154,14 +154,14 @@ export interface CuratorIntegrationConfig {
   apiKey: string;
 }
 
-/** A folder/section for the internal document vault. */
-export type InternalDocFolder =
-  | "general"
-  | "hr"
-  | "legal"
-  | "finance"
-  | "operations"
-  | "compliance";
+/** A folder/section id for the internal document vault (admin-customizable). */
+export type InternalDocFolder = string;
+
+/** A user-defined folder in the internal document vault. */
+export interface DocFolder {
+  id: string;
+  name: string;
+}
 
 /** A company-wide internal document (not tied to a client). */
 export interface InternalDocument {
@@ -234,6 +234,7 @@ export interface AppState {
   tasks: Task[];
   events: CalendarEvent[];
   internalDocuments: InternalDocument[];
+  docFolders: DocFolder[];
   employees: Employee[];
   roles: Role[];
   calls: CallRecord[];
@@ -242,11 +243,12 @@ export interface AppState {
   curator: CuratorIntegrationConfig;
 }
 
-export const INTERNAL_DOC_FOLDERS: { id: InternalDocFolder; label: string }[] = [
-  { id: "general", label: "General" },
-  { id: "hr", label: "HR" },
-  { id: "legal", label: "Legal" },
-  { id: "finance", label: "Finance" },
-  { id: "operations", label: "Operations" },
-  { id: "compliance", label: "Compliance" },
+/** Folders a new workspace starts with (then fully editable by admins). */
+export const DEFAULT_DOC_FOLDERS: DocFolder[] = [
+  { id: "general", name: "General" },
+  { id: "hr", name: "HR" },
+  { id: "legal", name: "Legal" },
+  { id: "finance", name: "Finance" },
+  { id: "operations", name: "Operations" },
+  { id: "compliance", name: "Compliance" },
 ];
