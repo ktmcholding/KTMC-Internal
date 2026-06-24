@@ -12,7 +12,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const CORS = {
@@ -40,16 +39,15 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return json(401, { error: "Missing authorization" });
 
-  // Identify the caller from their JWT.
-  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // Identify the caller by validating their JWT with the service-role client
+  // (avoids depending on the anon key being present in the environment).
+  const token = authHeader.replace(/^Bearer\s+/i, "");
   const {
     data: { user: caller },
-  } = await userClient.auth.getUser();
+  } = await admin.auth.getUser(token);
   if (!caller) return json(401, { error: "Not authenticated" });
-
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   // Verify the caller is an active admin.
   const { data: callerProfile } = await admin
