@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, PhoneCall } from "lucide-react";
+import { Plus, Trash2, PhoneCall, FolderInput } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { CategoryId, Lead, LeadSource, LeadStatus } from "../../types";
 import { useStore } from "../../store/AppStore";
@@ -7,7 +7,7 @@ import { StatCard } from "../../components/StatCard";
 import { Modal } from "../../components/Modal";
 import { BreakdownPie } from "../../components/RevenueCharts";
 import { LeadSourceBadge } from "../../components/Badges";
-import { formatCurrency, formatDate, uid } from "../../lib/format";
+import { CATEGORIES, formatCurrency, formatDate, uid } from "../../lib/format";
 
 export function LeadsSection({ category }: { category: CategoryId }) {
   const { leadsByCategory, dispatch } = useStore();
@@ -121,6 +121,31 @@ export function LeadsSection({ category }: { category: CategoryId }) {
                         <option value="won">Won</option>
                         <option value="lost">Lost</option>
                       </select>
+                      <div
+                        className="flex items-center gap-1"
+                        title="Move this lead to another category"
+                      >
+                        <FolderInput size={12} className="text-gray-400" />
+                        <select
+                          className="rounded border border-gray-200 bg-white px-1.5 py-1 text-xs"
+                          value={l.category}
+                          onChange={(e) => {
+                            const next = e.target.value as CategoryId;
+                            if (next !== l.category) {
+                              dispatch({
+                                type: "UPDATE_LEAD",
+                                lead: { ...l, category: next },
+                              });
+                            }
+                          }}
+                        >
+                          {CATEGORIES.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <button
                         className="text-gray-300 hover:text-red-500"
                         onClick={() => dispatch({ type: "DELETE_LEAD", id: l.id })}

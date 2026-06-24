@@ -14,7 +14,7 @@ import {
 import type { CategoryId, Lead, LeadSource } from "../types";
 import { useStore } from "../store/AppStore";
 import { PageHeader } from "../components/PageHeader";
-import { CATEGORIES, categoryById, formatCurrency, formatDate, uid } from "../lib/format";
+import { CATEGORIES, formatCurrency, formatDate, uid } from "../lib/format";
 import { LeadSourceBadge } from "../components/Badges";
 import { isSupabaseConfigured } from "../lib/supabase";
 
@@ -325,8 +325,27 @@ export function QuoIntegration() {
                       <p className="font-medium text-gray-800">{l.company}</p>
                       <p className="text-xs text-gray-500">{l.name}</p>
                     </td>
-                    <td className="px-5 py-2.5 text-gray-600">
-                      {categoryById(l.category).name}
+                    <td className="px-5 py-2.5">
+                      <select
+                        className="rounded border border-gray-200 bg-white px-1.5 py-1 text-xs"
+                        value={l.category}
+                        title="Move this lead to another category"
+                        onChange={(e) => {
+                          const next = e.target.value as CategoryId;
+                          if (next !== l.category) {
+                            dispatch({
+                              type: "UPDATE_LEAD",
+                              lead: { ...l, category: next },
+                            });
+                          }
+                        }}
+                      >
+                        {CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-5 py-2.5">
                       <LeadSourceBadge source={l.source} />
