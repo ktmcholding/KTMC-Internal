@@ -644,7 +644,7 @@ export async function persist(action: Action): Promise<void> {
       return;
     case "SET_DOC_FOLDERS":
       await throwOn(
-        sb.from("settings").upsert({ key: "doc_folders", value: action.folders })
+        sb.from("settings").upsert({ key: "doc_folders", value: action.folders }, { onConflict: "key" })
       );
       return;
 
@@ -671,7 +671,7 @@ export async function persist(action: Action): Promise<void> {
       return;
     case "SET_ROLES":
       await throwOn(
-        sb.from("settings").upsert({ key: "roles", value: action.roles })
+        sb.from("settings").upsert({ key: "roles", value: action.roles }, { onConflict: "key" })
       );
       return;
 
@@ -701,18 +701,18 @@ export async function persist(action: Action): Promise<void> {
       await throwOn(
         sb
           .from("settings")
-          .upsert({ key: "email_examples", value: action.examples })
+          .upsert({ key: "email_examples", value: action.examples }, { onConflict: "key" })
       );
       return;
 
     case "SET_QUO":
       await throwOn(
-        sb.from("settings").upsert({ key: "quo", value: action.config })
+        sb.from("settings").upsert({ key: "quo", value: action.config }, { onConflict: "key" })
       );
       return;
     case "SET_CURATOR":
       await throwOn(
-        sb.from("settings").upsert({ key: "curator", value: action.config })
+        sb.from("settings").upsert({ key: "curator", value: action.config }, { onConflict: "key" })
       );
       return;
 
