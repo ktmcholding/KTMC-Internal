@@ -125,16 +125,28 @@ Deno.serve(async (req) => {
     const { data } = await supabase.from("clients").select("id, phone, category");
     return (data ?? []).find((c) => digits(c.phone) === n) ?? null;
   }
-  async function openLeadExists(phone: string) {
+  // Find an existing open lead with the same phone number.
+  async function findOpenLead(phone: string) {
     const n = digits(phone);
-    if (!n) return false;
-    const { data } = await supabase.from("leads").select("phone, status");
-    return (data ?? []).some(
-      (l) => digits(l.phone) === n && l.status !== "lost" && l.status !== "won"
+    if (!n) return null;
+    const { data } = await supabase
+      .from("leads")
+      .select("id, phone, notes, status, category");
+    return (
+      (data ?? []).find(
+        (l) => digits(l.phone) === n && l.status !== "lost" && l.status !== "won"
+      ) ?? null
     );
   }
+  // Append a timestamped note to an existing lead (keeps its info current).
+  async function appendLeadNote(
+    lead: { id: string; notes?: string | null },
+    note: string
+  ) {
+    const newNotes = `${lead.notes ? `${lead.notes}\n\n` : ""}${note}`;
+    await supabase.from("leads").update({ notes: newNotes }).eq("id", lead.id);
+  }
   async function createLead(phone: string, notes: string, source: string) {
-    if (await openLeadExists(phone)) return { skipped: "duplicate-lead" };
     const category = classify(notes) || defaultCategory;
     const lead = {
       id: `quo_${crypto.randomUUID()}`,
@@ -194,7 +206,22 @@ Deno.serve(async (req) => {
         if (error) throw error;
         return json(200, { ok: true, kind: "call", clientId: client.id });
       }
-      // Unknown caller → treat as a new lead, carrying the summary.
+      // Caller is an existing lead → update that lead with the call info.
+      const existingLead = await findOpenLead(customerPhone);
+      if (existingLead) {
+        const date = occurredAt.slice(0, 10);
+        await appendLeadNote(
+          existingLead,
+          `📞 Call ${date}:\n${summary || "(no summary)"}`
+        );
+        return json(200, {
+          ok: true,
+          kind: "lead-updated",
+          id: existingLead.id,
+          from: "call",
+        });
+      }
+      // Unknown caller → create a new lead carrying the summary.
       const res = await createLead(customerPhone, summary, "quo-phone");
       return json(200, { ok: true, ...res, from: "call" });
     }
@@ -209,6 +236,18 @@ Deno.serve(async (req) => {
       const body = str(obj.body || obj.text);
       if (await findClient(from)) {
         return json(200, { ok: true, skipped: "existing-client" });
+      }
+      // Repeat inquiry from an existing lead → update that lead.
+      const existingLead = await findOpenLead(from);
+      if (existingLead) {
+        const date = new Date().toISOString().slice(0, 10);
+        await appendLeadNote(existingLead, `💬 Message ${date}: ${body}`);
+        return json(200, {
+          ok: true,
+          kind: "lead-updated",
+          id: existingLead.id,
+          from: "message",
+        });
       }
       const res = await createLead(from, body, "quo-phone");
       return json(200, { ok: true, ...res, from: "message" });
