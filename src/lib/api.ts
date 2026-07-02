@@ -17,6 +17,7 @@ import type {
   Employee,
   InternalDocument,
   InternalDocFolder,
+  InventoryItem,
   Invoice,
   InvoiceLineItem,
   Lead,
@@ -186,6 +187,21 @@ function toInternalDocument(r: Row): InternalDocument {
   };
 }
 
+function toInventoryItem(r: Row): InventoryItem {
+  return {
+    id: str(r.id),
+    name: str(r.name),
+    sku: str(r.sku),
+    quantity: num(r.quantity),
+    unit: str(r.unit),
+    reorderLevel: num(r.reorder_level),
+    unitCost: num(r.unit_cost),
+    supplier: str(r.supplier),
+    notes: str(r.notes),
+    updatedAt: str(r.updated_at),
+  };
+}
+
 function toEvent(r: Row): CalendarEvent {
   return {
     id: str(r.id),
@@ -216,6 +232,7 @@ export async function fetchAll(): Promise<AppState> {
     internalDocsRes,
     employeesRes,
     callsRes,
+    inventoryRes,
   ] = await Promise.all([
     sb.from("clients").select("*"),
     sb.from("documents").select("*"),
@@ -229,6 +246,7 @@ export async function fetchAll(): Promise<AppState> {
     sb.from("internal_documents").select("*"),
     sb.from("employees").select("*"),
     sb.from("calls").select("*"),
+    sb.from("inventory").select("*"),
   ]);
 
   const firstError =
@@ -243,7 +261,8 @@ export async function fetchAll(): Promise<AppState> {
     settingsRes.error ||
     internalDocsRes.error ||
     employeesRes.error ||
-    callsRes.error;
+    callsRes.error ||
+    inventoryRes.error;
   if (firstError) throw firstError;
 
   const docsByClient = new Map<string, ClientDocument[]>();
@@ -289,6 +308,7 @@ export async function fetchAll(): Promise<AppState> {
       (settingsMap.get("client_doc_sections") as
         | AppState["clientDocSections"]
         | undefined) ?? DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
+    inventory: (inventoryRes.data ?? []).map((r) => toInventoryItem(r as Row)),
     employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
     roles: (settingsMap.get("roles") as AppState["roles"] | undefined) ?? [],
     calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
@@ -725,6 +745,21 @@ export async function persist(action: Action): Promise<void> {
       );
       return;
 
+    case "ADD_INVENTORY_ITEM":
+      await throwOn(sb.from("inventory").insert(inventoryRow(action.item)));
+      return;
+    case "UPDATE_INVENTORY_ITEM":
+      await throwOn(
+        sb
+          .from("inventory")
+          .update(inventoryRow(action.item))
+          .eq("id", action.item.id)
+      );
+      return;
+    case "DELETE_INVENTORY_ITEM":
+      await throwOn(sb.from("inventory").delete().eq("id", action.id));
+      return;
+
     case "SET_QUO":
       await throwOn(
         sb.from("settings").upsert({ key: "quo", value: action.config }, { onConflict: "key" })
@@ -791,6 +826,21 @@ function clientRow(c: Client) {
     notes: c.notes ?? "",
     goals: c.goals ?? [],
     created_at: c.createdAt,
+  };
+}
+
+function inventoryRow(i: InventoryItem) {
+  return {
+    id: i.id,
+    name: i.name,
+    sku: i.sku,
+    quantity: i.quantity,
+    unit: i.unit,
+    reorder_level: i.reorderLevel,
+    unit_cost: i.unitCost,
+    supplier: i.supplier,
+    notes: i.notes,
+    updated_at: i.updatedAt,
   };
 }
 

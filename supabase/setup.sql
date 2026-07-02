@@ -355,3 +355,25 @@ alter table employees add column if not exists title text not null default '';
 alter table clients add column if not exists notes text not null default '';
 alter table clients add column if not exists goals jsonb not null default '[]'::jsonb;
 alter table documents add column if not exists section text not null default 'general';
+
+-- =============================================================
+-- supabase/migrations/0008_inventory.sql
+-- =============================================================
+-- Formulation ingredient inventory.
+create table if not exists inventory (
+  id             text primary key,
+  name           text not null default '',
+  sku            text not null default '',
+  quantity       numeric not null default 0,
+  unit           text not null default '',
+  reorder_level  numeric not null default 0,
+  unit_cost      numeric not null default 0,
+  supplier       text not null default '',
+  notes          text not null default '',
+  updated_at     date not null default current_date
+);
+
+alter table inventory enable row level security;
+drop policy if exists "authenticated full access" on inventory;
+create policy "authenticated full access" on inventory
+  for all to authenticated using (true) with check (true);

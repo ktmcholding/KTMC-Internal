@@ -50,6 +50,9 @@ function describeAction(action: Action): string | null {
     case "ADD_CALL": return "Logged a call";
     case "DELETE_CALL": return "Deleted a call";
     case "SET_EMAIL_EXAMPLES": return "Updated email writing samples";
+    case "ADD_INVENTORY_ITEM": return "Added an inventory item";
+    case "UPDATE_INVENTORY_ITEM": return "Updated an inventory item";
+    case "DELETE_INVENTORY_ITEM": return "Removed an inventory item";
     default: return null;
   }
 }
@@ -210,6 +213,21 @@ function reducer(state: AppState, action: Action): AppState {
 
     case "SET_EMAIL_EXAMPLES":
       return { ...state, emailExamples: action.examples };
+
+    case "ADD_INVENTORY_ITEM":
+      return { ...state, inventory: [action.item, ...state.inventory] };
+    case "UPDATE_INVENTORY_ITEM":
+      return {
+        ...state,
+        inventory: state.inventory.map((i) =>
+          i.id === action.item.id ? action.item : i
+        ),
+      };
+    case "DELETE_INVENTORY_ITEM":
+      return {
+        ...state,
+        inventory: state.inventory.filter((i) => i.id !== action.id),
+      };
 
     case "SET_QUO":
       return { ...state, quo: action.config };

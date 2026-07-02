@@ -137,6 +137,25 @@ export interface EmailExample {
   content: string;
 }
 
+/** A formulation ingredient / raw material tracked in inventory. */
+export interface InventoryItem {
+  id: string;
+  name: string;
+  /** Optional SKU / internal code. */
+  sku: string;
+  /** Quantity currently on hand. */
+  quantity: number;
+  /** Unit of measure, e.g. "kg", "g", "L", "units". */
+  unit: string;
+  /** Low-stock threshold; below this the item is flagged to reorder. */
+  reorderLevel: number;
+  /** Cost per unit. */
+  unitCost: number;
+  supplier: string;
+  notes: string;
+  updatedAt: string; // ISO date
+}
+
 export type TaskStatus = "todo" | "in-progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 
@@ -270,6 +289,8 @@ export interface AppState {
   internalDocuments: InternalDocument[];
   docFolders: DocFolder[];
   clientDocSections: ClientDocSection[];
+  /** Formulation ingredient inventory. */
+  inventory: InventoryItem[];
   employees: Employee[];
   roles: Role[];
   calls: CallRecord[];

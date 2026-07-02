@@ -37,6 +37,7 @@ export function emptyState(): AppState {
     internalDocuments: [],
     docFolders: DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
     clientDocSections: DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
+    inventory: [],
     employees: [],
     roles: [],
     calls: [],
@@ -221,6 +222,12 @@ export const seedState: AppState = {
   ],
   docFolders: DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
   clientDocSections: DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
+  inventory: [
+    { id: "ing_1", name: "Hyaluronic Acid (LMW)", sku: "HA-LMW-01", quantity: 12, unit: "kg", reorderLevel: 5, unitCost: 145, supplier: "Actives Supply Co.", notes: "Cosmetic grade.", updatedAt: "2026-06-01" },
+    { id: "ing_2", name: "Vitamin C (SAP)", sku: "VC-SAP-02", quantity: 3, unit: "kg", reorderLevel: 4, unitCost: 88, supplier: "Actives Supply Co.", notes: "Store cool & dry.", updatedAt: "2026-06-12" },
+    { id: "ing_3", name: "Glycerin (USP)", sku: "GLY-USP", quantity: 60, unit: "L", reorderLevel: 20, unitCost: 6, supplier: "BulkChem", notes: "", updatedAt: "2026-05-20" },
+    { id: "ing_4", name: "Phenoxyethanol", sku: "PRES-PE", quantity: 8, unit: "L", reorderLevel: 10, unitCost: 22, supplier: "PreservaChem", notes: "Preservative.", updatedAt: "2026-06-18" },
+  ],
   emailExamples: [
     {
       id: "ex_1",

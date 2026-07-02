@@ -10,6 +10,7 @@ import type {
   EmailExample,
   Employee,
   InternalDocument,
+  InventoryItem,
   Invoice,
   Lead,
   QuoIntegrationConfig,
@@ -55,6 +56,9 @@ export type Action =
   | { type: "ADD_CALL"; call: CallRecord }
   | { type: "DELETE_CALL"; id: string }
   | { type: "SET_EMAIL_EXAMPLES"; examples: EmailExample[] }
+  | { type: "ADD_INVENTORY_ITEM"; item: InventoryItem }
+  | { type: "UPDATE_INVENTORY_ITEM"; item: InventoryItem }
+  | { type: "DELETE_INVENTORY_ITEM"; id: string }
   | { type: "SET_QUO"; config: QuoIntegrationConfig }
   | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
   | { type: "SET_COMPANY"; company: CompanyInfo }
