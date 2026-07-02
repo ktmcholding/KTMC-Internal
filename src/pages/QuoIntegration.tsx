@@ -10,6 +10,8 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Loader2,
+  CloudDownload,
 } from "lucide-react";
 import type { CategoryId, Lead, LeadSource } from "../types";
 import { useStore } from "../store/AppStore";
@@ -17,6 +19,7 @@ import { PageHeader } from "../components/PageHeader";
 import { CATEGORIES, formatCurrency, formatDate, uid } from "../lib/format";
 import { LeadSourceBadge } from "../components/Badges";
 import { isSupabaseConfigured } from "../lib/supabase";
+import { syncQuo, type QuoSyncResult } from "../lib/api";
 
 const WEBHOOK_URL = isSupabaseConfigured
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/quo-webhook`
@@ -69,7 +72,35 @@ export function QuoIntegration() {
   );
   const [autoImport, setAutoImport] = useState(quo.autoImport);
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<QuoSyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   const quoLeads = state.leads.filter((l) => l.source.startsWith("quo"));
+
+  async function syncNow() {
+    setSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+    try {
+      const res = await syncQuo({
+        defaultCategory,
+        withCalls: true,
+      });
+      setSyncResult(res);
+      dispatch({
+        type: "SET_QUO",
+        config: { ...quo, lastSyncedAt: new Date().toISOString() },
+      });
+      await refresh();
+    } catch (e) {
+      setSyncError(
+        e instanceof Error ? e.message : "Could not sync from Quo. Check the setup."
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   function connect() {
     dispatch({
@@ -249,6 +280,58 @@ export function QuoIntegration() {
                 : "never"}
             </p>
           </div>
+
+          {isSupabaseConfigured && (
+            <div className="card mt-6 p-5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="rounded-lg bg-brand-100 p-1.5 text-brand-700">
+                  <CloudDownload size={16} />
+                </span>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Import from Quo
+                </h2>
+              </div>
+              <p className="mb-3 text-xs text-gray-500">
+                Pull the contacts and recent calls already stored in your Quo
+                account into the system. New contacts become leads; calls are
+                added to the matching client's history. Runs safely — existing
+                records are skipped, not duplicated.
+              </p>
+              <button
+                className="btn-primary w-full justify-center"
+                onClick={syncNow}
+                disabled={syncing}
+              >
+                {syncing ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <CloudDownload size={16} />
+                )}
+                {syncing ? "Syncing from Quo…" : "Sync from Quo now"}
+              </button>
+              {syncResult && (
+                <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                  Synced {syncResult.contacts} contact(s) —{" "}
+                  {syncResult.leadsAdded} new lead(s) and {syncResult.calls} call(s)
+                  added.
+                  {syncResult.errors.length > 0 && (
+                    <span className="mt-1 block text-amber-700">
+                      Some items were skipped: {syncResult.errors[0]}
+                    </span>
+                  )}
+                </div>
+              )}
+              {syncError && (
+                <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  {syncError}
+                </div>
+              )}
+              <p className="mt-2 text-xs text-gray-400">
+                Requires the <code>quo-sync</code> function deployed and a{" "}
+                <code>QUO_API_KEY</code> secret set in Supabase.
+              </p>
+            </div>
+          )}
 
           {isSupabaseConfigured && (
             <div className="card mt-6 p-5">

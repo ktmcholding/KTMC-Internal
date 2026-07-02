@@ -531,6 +531,35 @@ export interface DraftedEmail {
 }
 
 // ---------------------------------------------------------------------------
+// Quo (OpenPhone) historical sync via the quo-sync Edge Function
+// ---------------------------------------------------------------------------
+
+export interface QuoSyncResult {
+  contacts: number;
+  leadsAdded: number;
+  calls: number;
+  errors: string[];
+}
+
+/** Pull existing contacts + recent calls from Quo into the system. */
+export async function syncQuo(input: {
+  defaultCategory: string;
+  withCalls?: boolean;
+}): Promise<QuoSyncResult> {
+  const sb = db();
+  const { data, error } = await sb.functions.invoke("quo-sync", { body: input });
+  if (error) throw error;
+  const res = data as Partial<QuoSyncResult> & { error?: string };
+  if (res.error) throw new Error(res.error);
+  return {
+    contacts: res.contacts ?? 0,
+    leadsAdded: res.leadsAdded ?? 0,
+    calls: res.calls ?? 0,
+    errors: res.errors ?? [],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Public contract signing (via the sign-contract Edge Function — no auth)
 // ---------------------------------------------------------------------------
 
