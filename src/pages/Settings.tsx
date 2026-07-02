@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { UploadCloud, Building2, Save, Check } from "lucide-react";
+import { UploadCloud, Building2, Save, Check, MessageSquareText } from "lucide-react";
 import { useStore } from "../store/AppStore";
 import { PageHeader } from "../components/PageHeader";
+import { WritingSamples } from "../components/WritingSamples";
 
 export function Settings() {
   const { state, dispatch } = useStore();
@@ -131,6 +132,29 @@ export function Settings() {
             {company.phone && `(${company.phone})`} {company.email}</em>
           </p>
         </div>
+      </div>
+
+      <div className="card mt-6 space-y-4 p-6">
+        <div className="flex items-center gap-2">
+          <span className="rounded-lg bg-brand-100 p-2 text-brand-700">
+            <MessageSquareText size={18} />
+          </span>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Writing voice
+            </h2>
+            <p className="text-xs text-gray-500">
+              Upload past emails and chat logs so AI-drafted emails sound like
+              you. These samples are used every time you draft an email.
+            </p>
+          </div>
+        </div>
+        <WritingSamples
+          examples={state.emailExamples}
+          onChange={(examples) =>
+            dispatch({ type: "SET_EMAIL_EXAMPLES", examples })
+          }
+        />
       </div>
     </div>
   );

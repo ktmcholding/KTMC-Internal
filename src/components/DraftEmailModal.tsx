@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Sparkles,
-  Plus,
-  Trash2,
   Copy,
   Check,
   Loader2,
@@ -13,9 +11,9 @@ import {
 import type { Client, EmailExample } from "../types";
 import { useStore } from "../store/AppStore";
 import { Modal } from "./Modal";
+import { WritingSamples } from "./WritingSamples";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { draftEmail } from "../lib/api";
-import { uid } from "../lib/format";
 import { emailSignature, withSignature } from "../lib/emailSignature";
 
 export function DraftEmailModal({
@@ -207,19 +205,6 @@ function StyleSamples({
   onToggle: () => void;
   onChange: (examples: EmailExample[]) => void;
 }) {
-  const [label, setLabel] = useState("");
-  const [content, setContent] = useState("");
-
-  function add() {
-    if (!content.trim()) return;
-    onChange([
-      ...examples,
-      { id: uid("ex"), label: label.trim() || "Sample", content: content.trim() },
-    ]);
-    setLabel("");
-    setContent("");
-  }
-
   return (
     <div className="rounded-lg border border-gray-200">
       <button
@@ -236,49 +221,8 @@ function StyleSamples({
         </span>
       </button>
       {open && (
-        <div className="space-y-3 border-t border-gray-100 p-3">
-          {examples.length > 0 && (
-            <ul className="space-y-2">
-              {examples.map((e) => (
-                <li
-                  key={e.id}
-                  className="flex items-start justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-gray-700">{e.label}</p>
-                    <p className="line-clamp-2 whitespace-pre-wrap text-xs text-gray-500">
-                      {e.content}
-                    </p>
-                  </div>
-                  <button
-                    className="text-gray-400 hover:text-red-500"
-                    onClick={() => onChange(examples.filter((x) => x.id !== e.id))}
-                    aria-label="Remove sample"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="space-y-2">
-            <input
-              className="input"
-              placeholder="Label (e.g. 'Follow-up after a call')"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-            <textarea
-              className="input"
-              rows={3}
-              placeholder="Paste a past email or ChatGPT conversation to mimic the tone…"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
-            <button className="btn-secondary" onClick={add}>
-              <Plus size={15} /> Add sample
-            </button>
-          </div>
+        <div className="border-t border-gray-100 p-3">
+          <WritingSamples examples={examples} onChange={onChange} />
         </div>
       )}
     </div>
