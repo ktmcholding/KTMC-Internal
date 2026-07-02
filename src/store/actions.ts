@@ -39,6 +39,12 @@ export type Action =
       documentId: string;
       path?: string;
     }
+  | {
+      type: "RENAME_CLIENT_DOCUMENT";
+      clientId: string;
+      documentId: string;
+      name: string;
+    }
   | { type: "ADD_TASK"; task: Task }
   | { type: "UPDATE_TASK"; task: Task }
   | { type: "DELETE_TASK"; id: string }
@@ -47,6 +53,7 @@ export type Action =
   | { type: "ADD_INTERNAL_DOCS"; documents: InternalDocument[] }
   | { type: "DELETE_INTERNAL_DOC"; id: string; path?: string }
   | { type: "MOVE_INTERNAL_DOC"; id: string; folder: string }
+  | { type: "RENAME_INTERNAL_DOC"; id: string; name: string }
   | { type: "SET_DOC_FOLDERS"; folders: DocFolder[] }
   | { type: "SET_CLIENT_DOC_SECTIONS"; sections: DocFolder[] }
   | { type: "ADD_EMPLOYEE"; employee: Employee }

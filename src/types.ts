@@ -60,6 +60,8 @@ export interface InvoiceLineItem {
 export interface Invoice {
   id: string;
   number: string;
+  /** Optional custom label/title, e.g. "Deposit — Serum project". */
+  label: string;
   category: CategoryId;
   clientId: string;
   issueDate: string; // ISO date

@@ -6,6 +6,7 @@ import {
   FolderClosed,
   Settings,
   Plus,
+  Pencil,
 } from "lucide-react";
 import type { DocFolder, InternalDocFolder, InternalDocument } from "../types";
 import { useStore } from "../store/AppStore";
@@ -180,6 +181,25 @@ export function InternalDocuments() {
                           <Download size={16} />
                         </button>
                       )}
+                      <button
+                        className="text-gray-400 hover:text-brand-600"
+                        title="Rename / label"
+                        onClick={() => {
+                          const next = window.prompt(
+                            "Label for this document:",
+                            d.name
+                          );
+                          if (next && next.trim() && next.trim() !== d.name) {
+                            dispatch({
+                              type: "RENAME_INTERNAL_DOC",
+                              id: d.id,
+                              name: next.trim(),
+                            });
+                          }
+                        }}
+                      >
+                        <Pencil size={16} />
+                      </button>
                       <button
                         className="text-gray-400 hover:text-red-500"
                         title="Delete"

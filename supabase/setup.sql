@@ -377,3 +377,9 @@ alter table inventory enable row level security;
 drop policy if exists "authenticated full access" on inventory;
 create policy "authenticated full access" on inventory
   for all to authenticated using (true) with check (true);
+
+-- =============================================================
+-- supabase/migrations/0009_invoice_label.sql
+-- =============================================================
+-- Optional custom label / title on invoices.
+alter table invoices add column if not exists label text not null default '';

@@ -72,6 +72,11 @@ export function InvoicesSection({ category }: { category: CategoryId }) {
                   <tr key={inv.id}>
                     <td className="px-5 py-2.5 font-medium text-gray-800">
                       {inv.number}
+                      {inv.label && (
+                        <p className="text-xs font-normal text-gray-500">
+                          {inv.label}
+                        </p>
+                      )}
                     </td>
                     <td className="px-5 py-2.5 text-gray-600">
                       {clientName(inv.clientId)}
@@ -164,6 +169,7 @@ function CreateInvoiceModal({
 }) {
   const { dispatch, clientName } = useStore();
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [label, setLabel] = useState("");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
@@ -190,6 +196,7 @@ function CreateInvoiceModal({
     const invoice: Invoice = {
       id: uid("inv"),
       number: nextNumber,
+      label: label.trim(),
       category,
       clientId,
       issueDate,
@@ -220,6 +227,15 @@ function CreateInvoiceModal({
       }
     >
       <div className="space-y-4">
+        <div>
+          <label className="label">Label / title (optional)</label>
+          <input
+            className="input"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Deposit — Serum project"
+          />
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="label">Bill to (client)</label>

@@ -111,6 +111,7 @@ function toInvoice(r: Row, lineItems: InvoiceLineItem[]): Invoice {
   return {
     id: str(r.id),
     number: str(r.number),
+    label: str(r.label),
     category: r.category as Invoice["category"],
     clientId: str(r.client_id),
     issueDate: str(r.issue_date),
@@ -620,6 +621,14 @@ export async function persist(action: Action): Promise<void> {
       }
       await throwOn(sb.from("documents").delete().eq("id", action.documentId));
       return;
+    case "RENAME_CLIENT_DOCUMENT":
+      await throwOn(
+        sb
+          .from("documents")
+          .update({ name: action.name })
+          .eq("id", action.documentId)
+      );
+      return;
 
     case "ADD_TASK":
       await throwOn(sb.from("tasks").insert(taskRow(action.task)));
@@ -671,6 +680,14 @@ export async function persist(action: Action): Promise<void> {
         sb
           .from("internal_documents")
           .update({ folder: action.folder })
+          .eq("id", action.id)
+      );
+      return;
+    case "RENAME_INTERNAL_DOC":
+      await throwOn(
+        sb
+          .from("internal_documents")
+          .update({ name: action.name })
           .eq("id", action.id)
       );
       return;
@@ -805,6 +822,7 @@ function invoiceRow(inv: Invoice) {
   return {
     id: inv.id,
     number: inv.number,
+    label: inv.label ?? "",
     category: inv.category,
     client_id: inv.clientId || null,
     issue_date: inv.issueDate,

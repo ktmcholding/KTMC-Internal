@@ -32,6 +32,7 @@ function describeAction(action: Action): string | null {
     case "DELETE_CLIENT": return "Removed a client";
     case "ADD_CLIENT_DOCUMENTS": return "Uploaded client document(s)";
     case "DELETE_CLIENT_DOCUMENT": return "Deleted a client document";
+    case "RENAME_CLIENT_DOCUMENT": return "Renamed a client document";
     case "ADD_TASK": return "Created a task";
     case "UPDATE_TASK": return `Updated task (${action.task.status})`;
     case "DELETE_TASK": return "Deleted a task";
@@ -40,6 +41,7 @@ function describeAction(action: Action): string | null {
     case "ADD_INTERNAL_DOCS": return "Uploaded internal document(s)";
     case "DELETE_INTERNAL_DOC": return "Deleted an internal document";
     case "MOVE_INTERNAL_DOC": return "Moved an internal document";
+    case "RENAME_INTERNAL_DOC": return "Renamed an internal document";
     case "SET_DOC_FOLDERS": return "Updated document folders";
     case "SET_CLIENT_DOC_SECTIONS": return "Updated client document areas";
     case "SET_COMPANY": return "Updated company settings";
@@ -133,6 +135,20 @@ function reducer(state: AppState, action: Action): AppState {
             : c
         ),
       };
+    case "RENAME_CLIENT_DOCUMENT":
+      return {
+        ...state,
+        clients: state.clients.map((c) =>
+          c.id === action.clientId
+            ? {
+                ...c,
+                documents: c.documents.map((d) =>
+                  d.id === action.documentId ? { ...d, name: action.name } : d
+                ),
+              }
+            : c
+        ),
+      };
 
     case "ADD_TASK":
       return { ...state, tasks: [action.task, ...state.tasks] };
@@ -166,6 +182,13 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         internalDocuments: state.internalDocuments.map((d) =>
           d.id === action.id ? { ...d, folder: action.folder } : d
+        ),
+      };
+    case "RENAME_INTERNAL_DOC":
+      return {
+        ...state,
+        internalDocuments: state.internalDocuments.map((d) =>
+          d.id === action.id ? { ...d, name: action.name } : d
         ),
       };
     case "SET_DOC_FOLDERS":

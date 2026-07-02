@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from "react";
-import { FileText, Trash2, UploadCloud, Loader2 } from "lucide-react";
+import { FileText, Trash2, UploadCloud, Loader2, Pencil } from "lucide-react";
 import type { ClientDocument } from "../types";
 import { formatBytes, formatDate } from "../lib/format";
 
@@ -8,6 +8,8 @@ interface DocumentDropzoneProps {
   /** Called with the selected/dropped files. May be async (uploads). */
   onAdd: (files: File[]) => void | Promise<void>;
   onRemove?: (id: string) => void;
+  /** Give a document a custom label (rename its display name). */
+  onRename?: (id: string, name: string) => void;
   /** Open/download a stored document (e.g. via a signed URL). */
   onOpen?: (doc: ClientDocument) => void;
 }
@@ -21,6 +23,7 @@ export function DocumentDropzone({
   documents,
   onAdd,
   onRemove,
+  onRename,
   onOpen,
 }: DocumentDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -111,6 +114,20 @@ export function DocumentDropzone({
                 <span className="whitespace-nowrap text-xs text-gray-400">
                   {formatBytes(d.size)} · {formatDate(d.uploadedAt)}
                 </span>
+                {onRename && (
+                  <button
+                    className="text-gray-400 hover:text-brand-600"
+                    onClick={() => {
+                      const next = window.prompt("Label for this document:", d.name);
+                      if (next && next.trim() && next.trim() !== d.name) {
+                        onRename(d.id, next.trim());
+                      }
+                    }}
+                    aria-label={`Rename ${d.name}`}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
                 {onRemove && (
                   <button
                     className="text-gray-400 hover:text-red-500"

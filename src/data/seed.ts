@@ -163,6 +163,7 @@ export const seedState: AppState = {
     {
       id: "inv1",
       number: "KTMC-2026-0001",
+      label: "March fulfilment",
       category: "co-packing",
       clientId: "cli_pure",
       issueDate: "2026-03-09",
@@ -176,6 +177,7 @@ export const seedState: AppState = {
     {
       id: "inv2",
       number: "KTMC-2026-0002",
+      label: "Stability retainer",
       category: "formulation",
       clientId: "cli_aurora",
       issueDate: "2026-03-18",

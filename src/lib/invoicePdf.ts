@@ -81,6 +81,7 @@ export function openInvoicePdf(
     <div class="title">
       <h1>INVOICE</h1>
       <div class="muted">${esc(invoice.number)}</div>
+      ${invoice.label ? `<div class="muted" style="font-weight:600;color:#374151;">${esc(invoice.label)}</div>` : ""}
       <div style="margin-top:8px;"><span class="status">${esc(invoice.status)}</span></div>
     </div>
   </div>

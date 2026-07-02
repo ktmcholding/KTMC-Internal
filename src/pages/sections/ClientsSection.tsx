@@ -355,6 +355,14 @@ function ClientDocuments({ client }: { client: Client }) {
                     path: doc?.path,
                   });
                 }}
+                onRename={(docId, name) =>
+                  dispatch({
+                    type: "RENAME_CLIENT_DOCUMENT",
+                    clientId: client.id,
+                    documentId: docId,
+                    name,
+                  })
+                }
                 onOpen={
                   isSupabaseConfigured
                     ? async (doc) => {
