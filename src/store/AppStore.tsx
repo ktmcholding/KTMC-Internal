@@ -45,6 +45,7 @@ function describeAction(action: Action): string | null {
     case "SET_DOC_FOLDERS": return "Updated document folders";
     case "SET_CLIENT_DOC_SECTIONS": return "Updated client document areas";
     case "SET_COMPANY": return "Updated company settings";
+    case "SET_INVOICE_TEMPLATE": return "Updated the invoice template";
     case "ADD_EMPLOYEE": return "Added a team member";
     case "UPDATE_EMPLOYEE": return "Updated a team member";
     case "DELETE_EMPLOYEE": return "Removed a team member";
@@ -258,6 +259,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, curator: action.config };
     case "SET_COMPANY":
       return { ...state, company: action.company };
+    case "SET_INVOICE_TEMPLATE":
+      return { ...state, invoiceTemplate: action.template };
 
     case "RESET":
       return seedState;

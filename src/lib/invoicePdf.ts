@@ -1,4 +1,4 @@
-import type { Client, CompanyInfo, Invoice } from "../types";
+import type { Client, CompanyInfo, Invoice, InvoiceTemplate } from "../types";
 import { formatCurrency, formatDate } from "./format";
 
 function esc(s: string): string {
@@ -8,20 +8,30 @@ function esc(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
+/** Escape text and turn newlines into <br> for multi-line blocks. */
+function multiline(s: string): string {
+  return esc(s).replace(/\n/g, "<br/>");
+}
+
 /**
- * Build a printable invoice document (with the company letterhead) and open it
- * in a new window with the print dialog, so the user can "Save as PDF" and send
- * it to the client.
+ * Build a printable invoice document (with the company letterhead + template
+ * details) and open it in a new window with the print dialog, so the user can
+ * "Save as PDF" and send it to the client.
  */
 export function openInvoicePdf(
   invoice: Invoice,
   client: Client | undefined,
-  company: CompanyInfo
+  company: CompanyInfo,
+  template?: InvoiceTemplate
 ) {
-  const total = invoice.lineItems.reduce(
+  const subtotal = invoice.lineItems.reduce(
     (s, li) => s + li.quantity * li.unitPrice,
     0
   );
+  const taxRate = template?.taxRate && template.taxRate > 0 ? template.taxRate : 0;
+  const taxLabel = template?.taxLabel?.trim() || "Tax";
+  const tax = subtotal * (taxRate / 100);
+  const total = subtotal + tax;
 
   const rows = invoice.lineItems
     .map(
@@ -42,6 +52,12 @@ export function openInvoicePdf(
     : `<div class="wordmark">${esc(company.name || "KTMC")}</div>`;
 
   const contactBits = [company.phone, company.email].filter(Boolean).map(esc);
+  const fromAddress = template?.fromAddress?.trim() ?? "";
+  const businessNumber = template?.businessNumber?.trim() ?? "";
+  const paymentInstructions = template?.paymentInstructions?.trim() ?? "";
+  const footer =
+    template?.footer?.trim() ||
+    `Thank you for your business — ${company.name || "KTMC"}`;
 
   const html = `<!doctype html>
 <html>
@@ -77,6 +93,8 @@ export function openInvoicePdf(
   <div class="top">
     <div>${header}
       <div class="muted" style="margin-top:8px;">${contactBits.join(" &nbsp;·&nbsp; ")}</div>
+      ${fromAddress ? `<div class="muted" style="margin-top:4px;">${multiline(fromAddress)}</div>` : ""}
+      ${businessNumber ? `<div class="muted" style="margin-top:4px;">Business #: ${esc(businessNumber)}</div>` : ""}
     </div>
     <div class="title">
       <h1>INVOICE</h1>
@@ -110,13 +128,25 @@ export function openInvoicePdf(
 
   <div class="totals">
     <table>
+      ${
+        taxRate > 0
+          ? `<tr><td>Subtotal</td><td class="num">${formatCurrency(subtotal, true)}</td></tr>
+             <tr><td>${esc(taxLabel)} (${taxRate}%)</td><td class="num">${formatCurrency(tax, true)}</td></tr>`
+          : ""
+      }
       <tr class="grand"><td>Total</td><td class="num">${formatCurrency(total, true)}</td></tr>
     </table>
   </div>
 
-  ${invoice.notes ? `<div class="notes"><strong>Notes:</strong>\n${esc(invoice.notes)}</div>` : ""}
+  ${
+    paymentInstructions
+      ? `<div class="notes"><strong>Payment:</strong><br/>${multiline(paymentInstructions)}</div>`
+      : ""
+  }
 
-  <div class="foot">Thank you for your business — ${esc(company.name || "KTMC")}</div>
+  ${invoice.notes ? `<div class="notes"><strong>Notes:</strong><br/>${multiline(invoice.notes)}</div>` : ""}
+
+  <div class="foot">${esc(footer)}</div>
 
   <script>window.onload = function(){ setTimeout(function(){ window.focus(); window.print(); }, 300); };</script>
 </body>

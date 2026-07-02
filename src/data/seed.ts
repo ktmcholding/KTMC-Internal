@@ -25,6 +25,17 @@ const defaultCompany: AppState["company"] = {
   letterhead: "",
 };
 
+const defaultInvoiceTemplate: AppState["invoiceTemplate"] = {
+  fromAddress: "",
+  businessNumber: "",
+  paymentInstructions: "",
+  defaultTerms: "Payment due within 30 days (Net 30).",
+  taxLabel: "Tax",
+  taxRate: 0,
+  footer: "Thank you for your business.",
+  exampleImage: "",
+};
+
 /** An empty workspace (used in Supabase mode before/without data). */
 export function emptyState(): AppState {
   return {
@@ -43,6 +54,7 @@ export function emptyState(): AppState {
     calls: [],
     emailExamples: [],
     company: { ...defaultCompany },
+    invoiceTemplate: { ...defaultInvoiceTemplate },
     quo: { ...defaultQuo },
     curator: { ...defaultCurator },
   };
@@ -293,6 +305,7 @@ export const seedState: AppState = {
     },
   ],
   company: { ...defaultCompany },
+  invoiceTemplate: { ...defaultInvoiceTemplate },
   quo: {
     connected: false,
     phoneNumber: "",

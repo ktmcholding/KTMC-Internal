@@ -208,6 +208,29 @@ export interface CompanyInfo {
   letterhead: string;
 }
 
+/**
+ * Standing invoice details that print on every generated invoice, so they
+ * carry the proper information a client needs (address, how to pay, tax, terms).
+ */
+export interface InvoiceTemplate {
+  /** Your business address block (multi-line). */
+  fromAddress: string;
+  /** Business / tax / GST-HST number shown on the invoice. */
+  businessNumber: string;
+  /** How the client should pay (bank details, e-transfer, terms). */
+  paymentInstructions: string;
+  /** Default terms/notes pre-filled into new invoices. */
+  defaultTerms: string;
+  /** Tax label, e.g. "GST/HST", "VAT", "Sales tax". */
+  taxLabel: string;
+  /** Tax rate as a percent (e.g. 13 for 13%). 0 = no tax line. */
+  taxRate: number;
+  /** Footer line printed at the bottom of the invoice. */
+  footer: string;
+  /** An uploaded example/existing invoice (image data URL) kept for reference. */
+  exampleImage: string;
+}
+
 /** A folder/section id for the internal document vault (admin-customizable). */
 export type InternalDocFolder = string;
 
@@ -298,6 +321,7 @@ export interface AppState {
   calls: CallRecord[];
   emailExamples: EmailExample[];
   company: CompanyInfo;
+  invoiceTemplate: InvoiceTemplate;
   quo: QuoIntegrationConfig;
   curator: CuratorIntegrationConfig;
 }

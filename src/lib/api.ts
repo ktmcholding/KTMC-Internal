@@ -316,6 +316,10 @@ export async function fetchAll(): Promise<AppState> {
     emailExamples:
       (settingsMap.get("email_examples") as EmailExample[] | undefined) ?? [],
     company: { ...base.company, ...((settingsMap.get("company") as object) ?? {}) },
+    invoiceTemplate: {
+      ...base.invoiceTemplate,
+      ...((settingsMap.get("invoice_template") as object) ?? {}),
+    },
     quo: { ...base.quo, ...((settingsMap.get("quo") as object) ?? {}) },
     curator: {
       ...base.curator,
@@ -790,6 +794,16 @@ export async function persist(action: Action): Promise<void> {
     case "SET_COMPANY":
       await throwOn(
         sb.from("settings").upsert({ key: "company", value: action.company }, { onConflict: "key" })
+      );
+      return;
+    case "SET_INVOICE_TEMPLATE":
+      await throwOn(
+        sb
+          .from("settings")
+          .upsert(
+            { key: "invoice_template", value: action.template },
+            { onConflict: "key" }
+          )
       );
       return;
 

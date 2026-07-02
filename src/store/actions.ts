@@ -12,6 +12,7 @@ import type {
   InternalDocument,
   InventoryItem,
   Invoice,
+  InvoiceTemplate,
   Lead,
   QuoIntegrationConfig,
   Role,
@@ -69,4 +70,5 @@ export type Action =
   | { type: "SET_QUO"; config: QuoIntegrationConfig }
   | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
   | { type: "SET_COMPANY"; company: CompanyInfo }
+  | { type: "SET_INVOICE_TEMPLATE"; template: InvoiceTemplate }
   | { type: "RESET" };

@@ -118,7 +118,8 @@ export function InvoicesSection({ category }: { category: CategoryId }) {
                             openInvoicePdf(
                               inv,
                               clients.find((c) => c.id === inv.clientId),
-                              state.company
+                              state.company,
+                              state.invoiceTemplate
                             )
                           }
                           aria-label="Download invoice PDF"
@@ -167,7 +168,8 @@ function CreateInvoiceModal({
   nextNumber: string;
   onClose: () => void;
 }) {
-  const { dispatch, clientName } = useStore();
+  const { state, dispatch, clientName } = useStore();
+  const template = state.invoiceTemplate;
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
   const [label, setLabel] = useState("");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
@@ -177,7 +179,7 @@ function CreateInvoiceModal({
     return d.toISOString().slice(0, 10);
   });
   const [status, setStatus] = useState<InvoiceStatus>("draft");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(template.defaultTerms ?? "");
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([
     { id: uid("li"), description: "", quantity: 1, unitPrice: 0 },
   ]);
@@ -358,13 +360,22 @@ function CreateInvoiceModal({
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
-          <span className="text-sm text-gray-600">
-            {clientId ? `Billing ${clientName(clientId)}` : "Select a client"}
-          </span>
-          <span className="text-base font-semibold text-gray-900">
-            Total: {formatCurrency(total, true)}
-          </span>
+        <div className="rounded-lg bg-gray-50 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              {clientId ? `Billing ${clientName(clientId)}` : "Select a client"}
+            </span>
+            <span className="text-base font-semibold text-gray-900">
+              Total: {formatCurrency(total * (1 + (template.taxRate || 0) / 100), true)}
+            </span>
+          </div>
+          {template.taxRate > 0 && (
+            <p className="mt-1 text-right text-xs text-gray-500">
+              Subtotal {formatCurrency(total, true)} +{" "}
+              {template.taxLabel || "Tax"} ({template.taxRate}%){" "}
+              {formatCurrency(total * (template.taxRate / 100), true)}
+            </p>
+          )}
         </div>
       </div>
     </Modal>
