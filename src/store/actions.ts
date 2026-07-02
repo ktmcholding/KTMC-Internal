@@ -46,6 +46,7 @@ export type Action =
   | { type: "DELETE_INTERNAL_DOC"; id: string; path?: string }
   | { type: "MOVE_INTERNAL_DOC"; id: string; folder: string }
   | { type: "SET_DOC_FOLDERS"; folders: DocFolder[] }
+  | { type: "SET_CLIENT_DOC_SECTIONS"; sections: DocFolder[] }
   | { type: "ADD_EMPLOYEE"; employee: Employee }
   | { type: "UPDATE_EMPLOYEE"; employee: Employee }
   | { type: "DELETE_EMPLOYEE"; id: string }

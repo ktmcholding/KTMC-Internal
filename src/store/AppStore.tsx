@@ -41,6 +41,7 @@ function describeAction(action: Action): string | null {
     case "DELETE_INTERNAL_DOC": return "Deleted an internal document";
     case "MOVE_INTERNAL_DOC": return "Moved an internal document";
     case "SET_DOC_FOLDERS": return "Updated document folders";
+    case "SET_CLIENT_DOC_SECTIONS": return "Updated client document areas";
     case "ADD_EMPLOYEE": return "Added a team member";
     case "UPDATE_EMPLOYEE": return "Updated a team member";
     case "DELETE_EMPLOYEE": return "Removed a team member";
@@ -165,6 +166,8 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case "SET_DOC_FOLDERS":
       return { ...state, docFolders: action.folders };
+    case "SET_CLIENT_DOC_SECTIONS":
+      return { ...state, clientDocSections: action.sections };
 
     case "ADD_EMPLOYEE":
       if (state.employees.some((e) => e.id === action.employee.id)) {

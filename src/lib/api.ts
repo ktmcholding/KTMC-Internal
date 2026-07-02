@@ -3,7 +3,7 @@ import {
   DOCUMENTS_BUCKET,
   INTERNAL_DOCUMENTS_BUCKET,
 } from "./supabase";
-import { DEFAULT_DOC_FOLDERS } from "../types";
+import { DEFAULT_DOC_FOLDERS, DEFAULT_CLIENT_DOC_SECTIONS } from "../types";
 import type { Action } from "../store/actions";
 import { emptyState } from "../data/seed";
 import type {
@@ -50,6 +50,8 @@ function toClient(r: Row, documents: ClientDocument[]): Client {
     phone: str(r.phone),
     recurringRevenue: num(r.recurring_revenue),
     documents,
+    notes: str(r.notes),
+    goals: (r.goals as Client["goals"]) ?? [],
     createdAt: str(r.created_at),
   };
 }
@@ -60,6 +62,7 @@ function toDocument(r: Row): ClientDocument {
     name: str(r.name),
     size: num(r.size),
     type: str(r.type),
+    section: str(r.section) || "general",
     uploadedAt: str(r.uploaded_at),
     path: r.path ? str(r.path) : undefined,
   };
@@ -282,6 +285,10 @@ export async function fetchAll(): Promise<AppState> {
     docFolders:
       (settingsMap.get("doc_folders") as AppState["docFolders"] | undefined) ??
       DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
+    clientDocSections:
+      (settingsMap.get("client_doc_sections") as
+        | AppState["clientDocSections"]
+        | undefined) ?? DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
     employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
     roles: (settingsMap.get("roles") as AppState["roles"] | undefined) ?? [],
     calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
@@ -302,7 +309,8 @@ export async function fetchAll(): Promise<AppState> {
 /** Upload files to storage and return document records (rows inserted by persist). */
 export async function uploadClientDocuments(
   clientId: string,
-  files: File[]
+  files: File[],
+  section = "general"
 ): Promise<ClientDocument[]> {
   const sb = db();
   const out: ClientDocument[] = [];
@@ -319,6 +327,7 @@ export async function uploadClientDocuments(
       name: file.name,
       size: file.size,
       type: file.type || "application/octet-stream",
+      section,
       uploadedAt: new Date().toISOString().slice(0, 10),
       path,
     });
@@ -573,6 +582,7 @@ export async function persist(action: Action): Promise<void> {
             name: d.name,
             size: d.size,
             type: d.type,
+            section: d.section ?? "general",
             path: d.path ?? null,
             uploaded_at: d.uploadedAt,
           }))
@@ -645,6 +655,14 @@ export async function persist(action: Action): Promise<void> {
     case "SET_DOC_FOLDERS":
       await throwOn(
         sb.from("settings").upsert({ key: "doc_folders", value: action.folders }, { onConflict: "key" })
+      );
+      return;
+    case "SET_CLIENT_DOC_SECTIONS":
+      await throwOn(
+        sb.from("settings").upsert(
+          { key: "client_doc_sections", value: action.sections },
+          { onConflict: "key" }
+        )
       );
       return;
 
@@ -763,6 +781,8 @@ function clientRow(c: Client) {
     email: c.email,
     phone: c.phone,
     recurring_revenue: c.recurringRevenue,
+    notes: c.notes ?? "",
+    goals: c.goals ?? [],
     created_at: c.createdAt,
   };
 }

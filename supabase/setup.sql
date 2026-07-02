@@ -348,3 +348,10 @@ end $$;
 -- =============================================================
 -- Add a display title / role label to employees (custom roles).
 alter table employees add column if not exists title text not null default '';
+
+-- =============================================================
+-- supabase/migrations/0007_client_profile.sql
+-- =============================================================
+alter table clients add column if not exists notes text not null default '';
+alter table clients add column if not exists goals jsonb not null default '[]'::jsonb;
+alter table documents add column if not exists section text not null default 'general';

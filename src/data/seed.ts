@@ -1,5 +1,5 @@
 import type { AppState } from "../types";
-import { DEFAULT_DOC_FOLDERS } from "../types";
+import { DEFAULT_DOC_FOLDERS, DEFAULT_CLIENT_DOC_SECTIONS } from "../types";
 
 /** Default integration config used by both demo and backend modes. */
 const defaultQuo: AppState["quo"] = {
@@ -29,6 +29,7 @@ export function emptyState(): AppState {
     events: [],
     internalDocuments: [],
     docFolders: DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
+    clientDocSections: DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
     employees: [],
     roles: [],
     calls: [],
@@ -56,8 +57,15 @@ export const seedState: AppState = {
           name: "Formulation-brief.pdf",
           size: 248_512,
           type: "application/pdf",
+          section: "general",
           uploadedAt: "2026-03-12",
         },
+      ],
+      notes: "Prefers email updates. Targeting a Q3 launch.",
+      goals: [
+        { id: "g1", label: "Finalize serum formula", done: true },
+        { id: "g2", label: "Stability testing", done: false },
+        { id: "g3", label: "First production run", done: false },
       ],
       createdAt: "2025-11-04",
     },
@@ -70,6 +78,8 @@ export const seedState: AppState = {
       phone: "+1 (312) 555-0188",
       recurringRevenue: 9800,
       documents: [],
+      notes: "",
+      goals: [],
       createdAt: "2025-09-21",
     },
     {
@@ -81,6 +91,8 @@ export const seedState: AppState = {
       phone: "+1 (646) 555-0199",
       recurringRevenue: 6500,
       documents: [],
+      notes: "",
+      goals: [],
       createdAt: "2026-01-15",
     },
     {
@@ -92,6 +104,8 @@ export const seedState: AppState = {
       phone: "+1 (212) 555-0100",
       recurringRevenue: 12500,
       documents: [],
+      notes: "",
+      goals: [],
       createdAt: "2025-06-01",
     },
     {
@@ -103,6 +117,8 @@ export const seedState: AppState = {
       phone: "+1 (737) 555-0123",
       recurringRevenue: 3200,
       documents: [],
+      notes: "",
+      goals: [],
       createdAt: "2026-02-28",
     },
   ],
@@ -196,6 +212,7 @@ export const seedState: AppState = {
     },
   ],
   docFolders: DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
+  clientDocSections: DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
   emailExamples: [
     {
       id: "ex_1",

@@ -75,9 +75,29 @@ export interface ClientDocument {
   size: number; // bytes
   type: string; // mime type
   uploadedAt: string; // ISO date
+  /** Which document area/section it belongs to on the client profile. */
+  section: string;
   /** Storage object path (Supabase Storage). Absent in demo mode. */
   path?: string;
 }
+
+/** A goal/milestone tracked on a client profile (feeds the progress bar). */
+export interface ClientGoal {
+  id: string;
+  label: string;
+  done: boolean;
+}
+
+/** A named document upload area shown on every client profile. */
+export interface ClientDocSection {
+  id: string;
+  name: string;
+}
+
+export const DEFAULT_CLIENT_DOC_SECTIONS: ClientDocSection[] = [
+  { id: "general", name: "General documents" },
+  { id: "product-profile", name: "Product profile" },
+];
 
 export interface Client {
   id: string;
@@ -89,6 +109,10 @@ export interface Client {
   /** Total recognised recurring revenue from this client (per month). */
   recurringRevenue: number;
   documents: ClientDocument[];
+  /** Free-form notes about the client. */
+  notes: string;
+  /** Goals/milestones with a progress bar. */
+  goals: ClientGoal[];
   createdAt: string; // ISO date
 }
 
@@ -235,6 +259,7 @@ export interface AppState {
   events: CalendarEvent[];
   internalDocuments: InternalDocument[];
   docFolders: DocFolder[];
+  clientDocSections: ClientDocSection[];
   employees: Employee[];
   roles: Role[];
   calls: CallRecord[];

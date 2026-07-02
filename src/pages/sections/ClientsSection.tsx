@@ -9,9 +9,20 @@ import {
   PhoneOutgoing,
   PlayCircle,
   Mail,
+  Target,
+  CheckCircle2,
+  Circle,
+  FolderPlus,
 } from "lucide-react";
-import type { CallRecord, CategoryId, Client, ClientDocument } from "../../types";
+import type {
+  CallRecord,
+  CategoryId,
+  Client,
+  ClientDocument,
+  ClientGoal,
+} from "../../types";
 import { useStore } from "../../store/AppStore";
+import { useAuth } from "../../store/AuthStore";
 import { StatCard } from "../../components/StatCard";
 import { Modal } from "../../components/Modal";
 import { DraftEmailModal } from "../../components/DraftEmailModal";
@@ -122,54 +133,10 @@ export function ClientsSection({ category }: { category: CategoryId }) {
                               <Trash2 size={13} /> Remove client
                             </button>
                           </div>
+                          <ClientNotes client={c} />
+                          <ClientGoals client={c} />
                         </div>
-                        <div>
-                          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                            Documents
-                          </h3>
-                          <DocumentDropzone
-                            documents={c.documents}
-                            onAdd={async (files) => {
-                              let docs: ClientDocument[];
-                              if (isSupabaseConfigured) {
-                                docs = await uploadClientDocuments(c.id, files);
-                              } else {
-                                docs = files.map((f) => ({
-                                  id: uid("doc"),
-                                  name: f.name,
-                                  size: f.size,
-                                  type: f.type || "application/octet-stream",
-                                  uploadedAt: new Date()
-                                    .toISOString()
-                                    .slice(0, 10),
-                                }));
-                              }
-                              dispatch({
-                                type: "ADD_CLIENT_DOCUMENTS",
-                                clientId: c.id,
-                                documents: docs,
-                              });
-                            }}
-                            onRemove={(docId) => {
-                              const doc = c.documents.find((d) => d.id === docId);
-                              dispatch({
-                                type: "DELETE_CLIENT_DOCUMENT",
-                                clientId: c.id,
-                                documentId: docId,
-                                path: doc?.path,
-                              });
-                            }}
-                            onOpen={
-                              isSupabaseConfigured
-                                ? async (doc) => {
-                                    if (!doc.path) return;
-                                    const url = await getDocumentUrl(doc.path);
-                                    if (url) window.open(url, "_blank");
-                                  }
-                                : undefined
-                            }
-                          />
-                        </div>
+                        <ClientDocuments client={c} />
                       </div>
 
                       <CallTimeline
@@ -198,6 +165,210 @@ export function ClientsSection({ category }: { category: CategoryId }) {
       {draftFor && (
         <DraftEmailModal client={draftFor} onClose={() => setDraftFor(null)} />
       )}
+    </div>
+  );
+}
+
+function ClientNotes({ client }: { client: Client }) {
+  const { dispatch } = useStore();
+  const [notes, setNotes] = useState(client.notes ?? "");
+  return (
+    <div className="mt-4">
+      <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        Notes
+      </h3>
+      <textarea
+        className="input"
+        rows={3}
+        value={notes}
+        placeholder="Add notes about this client…"
+        onChange={(e) => setNotes(e.target.value)}
+        onBlur={() => {
+          if (notes !== (client.notes ?? "")) {
+            dispatch({ type: "UPDATE_CLIENT", client: { ...client, notes } });
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function ClientGoals({ client }: { client: Client }) {
+  const { dispatch } = useStore();
+  const goals = client.goals ?? [];
+  const [newGoal, setNewGoal] = useState("");
+  const done = goals.filter((g) => g.done).length;
+  const pct = goals.length ? Math.round((done / goals.length) * 100) : 0;
+
+  function save(next: ClientGoal[]) {
+    dispatch({ type: "UPDATE_CLIENT", client: { ...client, goals: next } });
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="mb-1.5 flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <Target size={13} /> Goals &amp; progress
+        </h3>
+        <span className="text-xs font-medium text-gray-500">
+          {done}/{goals.length} · {pct}%
+        </span>
+      </div>
+      <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+        <div
+          className="h-full rounded-full bg-brand-500 transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <ul className="space-y-1">
+        {goals.map((g) => (
+          <li key={g.id} className="flex items-center gap-2">
+            <button
+              className="text-gray-400 hover:text-brand-600"
+              onClick={() =>
+                save(
+                  goals.map((x) =>
+                    x.id === g.id ? { ...x, done: !x.done } : x
+                  )
+                )
+              }
+              aria-label={g.done ? "Mark not done" : "Mark done"}
+            >
+              {g.done ? (
+                <CheckCircle2 size={16} className="text-emerald-500" />
+              ) : (
+                <Circle size={16} />
+              )}
+            </button>
+            <span
+              className={`flex-1 text-sm ${
+                g.done ? "text-gray-400 line-through" : "text-gray-700"
+              }`}
+            >
+              {g.label}
+            </span>
+            <button
+              className="text-gray-300 hover:text-red-500"
+              onClick={() => save(goals.filter((x) => x.id !== g.id))}
+              aria-label="Remove goal"
+            >
+              <Trash2 size={13} />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 flex gap-2">
+        <input
+          className="input py-1.5 text-sm"
+          placeholder="Add a goal…"
+          value={newGoal}
+          onChange={(e) => setNewGoal(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && newGoal.trim()) {
+              save([...goals, { id: uid("g"), label: newGoal.trim(), done: false }]);
+              setNewGoal("");
+            }
+          }}
+        />
+        <button
+          className="btn-secondary px-2.5 py-1.5"
+          onClick={() => {
+            if (!newGoal.trim()) return;
+            save([...goals, { id: uid("g"), label: newGoal.trim(), done: false }]);
+            setNewGoal("");
+          }}
+        >
+          <Plus size={15} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ClientDocuments({ client }: { client: Client }) {
+  const { state, dispatch } = useStore();
+  const { isAdmin } = useAuth();
+  const sections = state.clientDocSections;
+
+  async function add(files: File[], sectionId: string) {
+    let docs: ClientDocument[];
+    if (isSupabaseConfigured) {
+      docs = await uploadClientDocuments(client.id, files, sectionId);
+    } else {
+      docs = files.map((f) => ({
+        id: uid("doc"),
+        name: f.name,
+        size: f.size,
+        type: f.type || "application/octet-stream",
+        section: sectionId,
+        uploadedAt: new Date().toISOString().slice(0, 10),
+      }));
+    }
+    dispatch({ type: "ADD_CLIENT_DOCUMENTS", clientId: client.id, documents: docs });
+  }
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Documents
+        </h3>
+        {isAdmin && (
+          <button
+            className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+            onClick={() => {
+              const name = window.prompt(
+                "Name for the new document area (e.g. Contracts):"
+              );
+              if (name && name.trim()) {
+                dispatch({
+                  type: "SET_CLIENT_DOC_SECTIONS",
+                  sections: [
+                    ...sections,
+                    { id: uid("sec"), name: name.trim() },
+                  ],
+                });
+              }
+            }}
+          >
+            <FolderPlus size={13} /> Add area
+          </button>
+        )}
+      </div>
+      <div className="space-y-4">
+        {sections.map((s) => {
+          const sectionDocs = client.documents.filter(
+            (d) => (d.section || "general") === s.id
+          );
+          return (
+            <div key={s.id}>
+              <p className="mb-1 text-xs font-medium text-gray-600">{s.name}</p>
+              <DocumentDropzone
+                documents={sectionDocs}
+                onAdd={(files) => add(files, s.id)}
+                onRemove={(docId) => {
+                  const doc = client.documents.find((d) => d.id === docId);
+                  dispatch({
+                    type: "DELETE_CLIENT_DOCUMENT",
+                    clientId: client.id,
+                    documentId: docId,
+                    path: doc?.path,
+                  });
+                }}
+                onOpen={
+                  isSupabaseConfigured
+                    ? async (doc) => {
+                        if (!doc.path) return;
+                        const url = await getDocumentUrl(doc.path);
+                        if (url) window.open(url, "_blank");
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -310,6 +481,8 @@ function AddClientModal({
       phone: form.phone.trim(),
       recurringRevenue: parseFloat(form.recurringRevenue) || 0,
       documents: [],
+      notes: "",
+      goals: [],
       createdAt: new Date().toISOString().slice(0, 10),
     };
     dispatch({ type: "ADD_CLIENT", client });
