@@ -10,6 +10,8 @@ import { CalendarPage } from "./pages/Calendar";
 import { Curator } from "./pages/Curator";
 import { QuoIntegration } from "./pages/QuoIntegration";
 import { InternalDocuments } from "./pages/InternalDocuments";
+import { Contracts } from "./pages/Contracts";
+import { SignContract } from "./pages/SignContract";
 import { Team } from "./pages/Team";
 import { Settings } from "./pages/Settings";
 import { type ReactNode } from "react";
@@ -49,6 +51,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      {/* Public contract signing — no auth required. */}
+      <Route path="/sign/:token" element={<SignContract />} />
       <Route
         path="/"
         element={
@@ -86,6 +90,14 @@ export default function App() {
         element={
           <RequireAuth section="documents">
             <InternalDocuments />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/contracts"
+        element={
+          <RequireAuth section="contracts">
+            <Contracts />
           </RequireAuth>
         }
       />

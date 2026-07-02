@@ -13,7 +13,7 @@ import type { AppState, CategoryId, Client, Invoice, Lead } from "../types";
 import type { Action } from "./actions";
 import { emptyState, seedState } from "../data/seed";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
-import { fetchAll, logActivity, persist, toCall, toLead } from "../lib/api";
+import { fetchAll, logActivity, persist, toCall, toContract, toLead } from "../lib/api";
 import { useAuth } from "./AuthStore";
 
 /** Human-readable label for an action, used in the silent activity log. */
@@ -56,6 +56,9 @@ function describeAction(action: Action): string | null {
     case "ADD_INVENTORY_ITEM": return "Added an inventory item";
     case "UPDATE_INVENTORY_ITEM": return "Updated an inventory item";
     case "DELETE_INVENTORY_ITEM": return "Removed an inventory item";
+    case "ADD_CONTRACT": return "Created a contract";
+    case "UPDATE_CONTRACT": return `Updated contract (${action.contract.status})`;
+    case "DELETE_CONTRACT": return "Deleted a contract";
     default: return null;
   }
 }
@@ -253,6 +256,29 @@ function reducer(state: AppState, action: Action): AppState {
         inventory: state.inventory.filter((i) => i.id !== action.id),
       };
 
+    case "ADD_CONTRACT":
+      if (state.contracts.some((c) => c.id === action.contract.id)) {
+        return {
+          ...state,
+          contracts: state.contracts.map((c) =>
+            c.id === action.contract.id ? action.contract : c
+          ),
+        };
+      }
+      return { ...state, contracts: [action.contract, ...state.contracts] };
+    case "UPDATE_CONTRACT":
+      return {
+        ...state,
+        contracts: state.contracts.map((c) =>
+          c.id === action.contract.id ? action.contract : c
+        ),
+      };
+    case "DELETE_CONTRACT":
+      return {
+        ...state,
+        contracts: state.contracts.filter((c) => c.id !== action.id),
+      };
+
     case "SET_QUO":
       return { ...state, quo: action.config };
     case "SET_CURATOR":
@@ -381,6 +407,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             if (id) rawDispatch({ type: "DELETE_CALL", id });
           } else {
             rawDispatch({ type: "ADD_CALL", call: toCall(payload.new) });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "contracts" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const id = (payload.old as { id?: string }).id;
+            if (id) rawDispatch({ type: "DELETE_CONTRACT", id });
+          } else {
+            rawDispatch({ type: "ADD_CONTRACT", contract: toContract(payload.new) });
           }
         }
       )

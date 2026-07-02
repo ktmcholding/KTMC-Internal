@@ -49,6 +49,7 @@ export function emptyState(): AppState {
     docFolders: DEFAULT_DOC_FOLDERS.map((f) => ({ ...f })),
     clientDocSections: DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
     inventory: [],
+    contracts: [],
     employees: [],
     roles: [],
     calls: [],
@@ -241,6 +242,27 @@ export const seedState: AppState = {
     { id: "ing_2", name: "Vitamin C (SAP)", sku: "VC-SAP-02", quantity: 3, unit: "kg", reorderLevel: 4, unitCost: 88, supplier: "Actives Supply Co.", notes: "Store cool & dry.", updatedAt: "2026-06-12" },
     { id: "ing_3", name: "Glycerin (USP)", sku: "GLY-USP", quantity: 60, unit: "L", reorderLevel: 20, unitCost: 6, supplier: "BulkChem", notes: "", updatedAt: "2026-05-20" },
     { id: "ing_4", name: "Phenoxyethanol", sku: "PRES-PE", quantity: 8, unit: "L", reorderLevel: 10, unitCost: 22, supplier: "PreservaChem", notes: "Preservative.", updatedAt: "2026-06-18" },
+  ],
+  contracts: [
+    {
+      id: "con_1",
+      title: "Mutual Non-Disclosure Agreement",
+      body:
+        "This Mutual Non-Disclosure Agreement is entered into between KTMC and Aurora Wellness.\n\nBoth parties agree to keep confidential any proprietary information shared during the course of the formulation project, and to use it solely for the purpose of evaluating and completing the engagement.\n\nBy signing below, the signer agrees to the terms of this agreement.",
+      clientId: "cli_aurora",
+      signerName: "Dana Wills",
+      signerEmail: "dana@aurorawellness.com",
+      status: "signed",
+      token: "demo-token-aurora-nda",
+      signerTypedName: "Dana Wills",
+      signature: "",
+      signedIp: "203.0.113.24",
+      signedUserAgent: "Mozilla/5.0",
+      createdBy: "ktmcholding@gmail.com",
+      createdAt: "2026-05-02",
+      sentAt: "2026-05-02T14:00:00Z",
+      signedAt: "2026-05-03T09:12:00Z",
+    },
   ],
   emailExamples: [
     {

@@ -19,6 +19,7 @@ export const SECTIONS: SectionDef[] = [
   { key: "duties", label: "Duties & Tasks" },
   { key: "calendar", label: "Calendar" },
   { key: "documents", label: "Internal Documents" },
+  { key: "contracts", label: "Contracts" },
   { key: "curator", label: "Curator" },
   { key: "quo", label: "QUO (Leads)" },
   { key: "team", label: "Team & Monitoring", adminOnly: true },

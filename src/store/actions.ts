@@ -5,6 +5,7 @@ import type {
   ClientDocument,
   CallRecord,
   CompanyInfo,
+  Contract,
   CuratorIntegrationConfig,
   DocFolder,
   EmailExample,
@@ -67,6 +68,9 @@ export type Action =
   | { type: "ADD_INVENTORY_ITEM"; item: InventoryItem }
   | { type: "UPDATE_INVENTORY_ITEM"; item: InventoryItem }
   | { type: "DELETE_INVENTORY_ITEM"; id: string }
+  | { type: "ADD_CONTRACT"; contract: Contract }
+  | { type: "UPDATE_CONTRACT"; contract: Contract }
+  | { type: "DELETE_CONTRACT"; id: string }
   | { type: "SET_QUO"; config: QuoIntegrationConfig }
   | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
   | { type: "SET_COMPANY"; company: CompanyInfo }

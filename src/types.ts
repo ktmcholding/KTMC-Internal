@@ -158,6 +158,34 @@ export interface InventoryItem {
   updatedAt: string; // ISO date
 }
 
+export type ContractStatus = "draft" | "sent" | "signed" | "declined";
+
+/** A contract that is created internally and signed by a client via a link. */
+export interface Contract {
+  id: string;
+  title: string;
+  /** The contract text/body (plain text, rendered with line breaks). */
+  body: string;
+  /** Optional linked client. */
+  clientId?: string;
+  signerName: string;
+  signerEmail: string;
+  status: ContractStatus;
+  /** Secret token used in the public signing link. */
+  token: string;
+  /** What the signer typed as their name when signing. */
+  signerTypedName: string;
+  /** Drawn signature as an image data URL. */
+  signature: string;
+  /** Audit info captured at signing time. */
+  signedIp: string;
+  signedUserAgent: string;
+  createdBy: string;
+  createdAt: string; // ISO date
+  sentAt?: string; // ISO timestamp
+  signedAt?: string; // ISO timestamp
+}
+
 export type TaskStatus = "todo" | "in-progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 
@@ -264,6 +292,7 @@ export type SectionKey =
   | "duties"
   | "calendar"
   | "documents"
+  | "contracts"
   | "curator"
   | "quo"
   | "team"
@@ -316,6 +345,8 @@ export interface AppState {
   clientDocSections: ClientDocSection[];
   /** Formulation ingredient inventory. */
   inventory: InventoryItem[];
+  /** Signable contracts. */
+  contracts: Contract[];
   employees: Employee[];
   roles: Role[];
   calls: CallRecord[];

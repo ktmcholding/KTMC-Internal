@@ -13,6 +13,7 @@ import type {
   CallRecord,
   Client,
   ClientDocument,
+  Contract,
   EmailExample,
   Employee,
   InternalDocument,
@@ -149,6 +150,27 @@ export function toCall(r: Row): CallRecord {
   };
 }
 
+export function toContract(r: Row): Contract {
+  return {
+    id: str(r.id),
+    title: str(r.title),
+    body: str(r.body),
+    clientId: r.client_id ? str(r.client_id) : undefined,
+    signerName: str(r.signer_name),
+    signerEmail: str(r.signer_email),
+    status: (r.status as Contract["status"]) ?? "draft",
+    token: str(r.token),
+    signerTypedName: str(r.signer_typed_name),
+    signature: str(r.signature),
+    signedIp: str(r.signed_ip),
+    signedUserAgent: str(r.signed_user_agent),
+    createdBy: str(r.created_by),
+    createdAt: str(r.created_at),
+    sentAt: r.sent_at ? str(r.sent_at) : undefined,
+    signedAt: r.signed_at ? str(r.signed_at) : undefined,
+  };
+}
+
 function toEmployee(r: Row): Employee {
   return {
     id: str(r.id),
@@ -234,6 +256,7 @@ export async function fetchAll(): Promise<AppState> {
     employeesRes,
     callsRes,
     inventoryRes,
+    contractsRes,
   ] = await Promise.all([
     sb.from("clients").select("*"),
     sb.from("documents").select("*"),
@@ -248,6 +271,7 @@ export async function fetchAll(): Promise<AppState> {
     sb.from("employees").select("*"),
     sb.from("calls").select("*"),
     sb.from("inventory").select("*"),
+    sb.from("contracts").select("*"),
   ]);
 
   const firstError =
@@ -263,7 +287,8 @@ export async function fetchAll(): Promise<AppState> {
     internalDocsRes.error ||
     employeesRes.error ||
     callsRes.error ||
-    inventoryRes.error;
+    inventoryRes.error ||
+    contractsRes.error;
   if (firstError) throw firstError;
 
   const docsByClient = new Map<string, ClientDocument[]>();
@@ -310,6 +335,7 @@ export async function fetchAll(): Promise<AppState> {
         | AppState["clientDocSections"]
         | undefined) ?? DEFAULT_CLIENT_DOC_SECTIONS.map((f) => ({ ...f })),
     inventory: (inventoryRes.data ?? []).map((r) => toInventoryItem(r as Row)),
+    contracts: (contractsRes.data ?? []).map((r) => toContract(r as Row)),
     employees: (employeesRes.data ?? []).map((r) => toEmployee(r as Row)),
     roles: (settingsMap.get("roles") as AppState["roles"] | undefined) ?? [],
     calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
@@ -502,6 +528,53 @@ export interface DraftEmailInput {
 export interface DraftedEmail {
   subject: string;
   body: string;
+}
+
+// ---------------------------------------------------------------------------
+// Public contract signing (via the sign-contract Edge Function — no auth)
+// ---------------------------------------------------------------------------
+
+export interface PublicContract {
+  id: string;
+  title: string;
+  body: string;
+  signerName: string;
+  status: Contract["status"];
+  signedAt?: string;
+  signerTypedName?: string;
+}
+
+/** Fetch the public view of a contract by its signing token. */
+export async function fetchContractByToken(
+  token: string
+): Promise<PublicContract | null> {
+  const sb = db();
+  const { data, error } = await sb.functions.invoke("sign-contract", {
+    body: { token, action: "get" },
+  });
+  if (error) throw error;
+  const res = data as { contract?: PublicContract; error?: string };
+  if (res.error) throw new Error(res.error);
+  return res.contract ?? null;
+}
+
+/** Submit a signature for a contract by token. */
+export async function signContractByToken(
+  token: string,
+  input: { typedName: string; signatureDataUrl: string }
+): Promise<void> {
+  const sb = db();
+  const { data, error } = await sb.functions.invoke("sign-contract", {
+    body: {
+      token,
+      action: "sign",
+      typedName: input.typedName,
+      signatureDataUrl: input.signatureDataUrl,
+    },
+  });
+  if (error) throw error;
+  const res = data as { ok?: boolean; error?: string };
+  if (res.error) throw new Error(res.error);
 }
 
 export async function draftEmail(input: DraftEmailInput): Promise<DraftedEmail> {
@@ -781,6 +854,21 @@ export async function persist(action: Action): Promise<void> {
       await throwOn(sb.from("inventory").delete().eq("id", action.id));
       return;
 
+    case "ADD_CONTRACT":
+      await throwOn(sb.from("contracts").insert(contractRow(action.contract)));
+      return;
+    case "UPDATE_CONTRACT":
+      await throwOn(
+        sb
+          .from("contracts")
+          .update(contractRow(action.contract))
+          .eq("id", action.contract.id)
+      );
+      return;
+    case "DELETE_CONTRACT":
+      await throwOn(sb.from("contracts").delete().eq("id", action.id));
+      return;
+
     case "SET_QUO":
       await throwOn(
         sb.from("settings").upsert({ key: "quo", value: action.config }, { onConflict: "key" })
@@ -858,6 +946,27 @@ function clientRow(c: Client) {
     notes: c.notes ?? "",
     goals: c.goals ?? [],
     created_at: c.createdAt,
+  };
+}
+
+function contractRow(c: Contract) {
+  return {
+    id: c.id,
+    title: c.title,
+    body: c.body,
+    client_id: c.clientId || null,
+    signer_name: c.signerName,
+    signer_email: c.signerEmail,
+    status: c.status,
+    token: c.token,
+    signer_typed_name: c.signerTypedName ?? "",
+    signature: c.signature ?? "",
+    signed_ip: c.signedIp ?? "",
+    signed_user_agent: c.signedUserAgent ?? "",
+    created_by: c.createdBy ?? "",
+    created_at: c.createdAt,
+    sent_at: c.sentAt || null,
+    signed_at: c.signedAt || null,
   };
 }
 
