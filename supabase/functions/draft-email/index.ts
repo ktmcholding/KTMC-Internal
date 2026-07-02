@@ -29,6 +29,7 @@ interface Body {
   clientName?: string;
   context?: string;
   instruction?: string;
+  signature?: string;
   examples?: { label: string; content: string }[];
 }
 
@@ -53,6 +54,7 @@ Deno.serve(async (req) => {
   const clientName = (payload.clientName ?? "the client").trim();
   const context = (payload.context ?? "").trim();
   const instruction = (payload.instruction ?? "Write a friendly follow-up email.").trim();
+  const signature = (payload.signature ?? "Cheers,\nKTMC\nSales@ktmcholdings.com").trim();
   const examples = Array.isArray(payload.examples) ? payload.examples : [];
 
   const styleBlock =
@@ -67,18 +69,20 @@ Deno.serve(async (req) => {
 
   const system =
     "You are an assistant that drafts follow-up emails on behalf of KTMC, a " +
-    "contract manufacturing and product company. Match the writing style, tone, " +
-    "greeting and sign-off shown in the provided sample emails as closely as " +
-    "possible. Keep the email concise and ready to send. Do not invent facts that " +
-    'are not supported by the conversation context. Respond with ONLY a JSON ' +
-    'object of the form {"subject": "...", "body": "..."} and nothing else — no ' +
-    "markdown, no code fences, no commentary.";
+    "contract manufacturing and product company. Match the writing style, tone " +
+    "and greeting shown in the provided sample emails as closely as possible. " +
+    "Keep the email concise and ready to send. Do not invent facts that are not " +
+    "supported by the conversation context. The email body MUST end with exactly " +
+    `this sign-off (verbatim, on its own lines, and nothing after it):\n${signature}\n` +
+    'Respond with ONLY a JSON object of the form {"subject": "...", "body": "..."} ' +
+    "and nothing else — no markdown, no code fences, no commentary.";
 
   const userContent =
     `Writing style samples to imitate:\n${styleBlock}\n\n` +
     `Client: ${clientName}\n\n` +
     `Conversation context / notes:\n${context || "(none provided)"}\n\n` +
-    `What this email should accomplish:\n${instruction}`;
+    `What this email should accomplish:\n${instruction}\n\n` +
+    `End the email with exactly this sign-off:\n${signature}`;
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 

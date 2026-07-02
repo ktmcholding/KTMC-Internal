@@ -16,6 +16,7 @@ import { Modal } from "./Modal";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { draftEmail } from "../lib/api";
 import { uid } from "../lib/format";
+import { emailSignature, withSignature } from "../lib/emailSignature";
 
 export function DraftEmailModal({
   client,
@@ -59,19 +60,23 @@ export function DraftEmailModal({
           clientName: client.name || client.company,
           context,
           instruction,
+          signature: emailSignature(state.company),
           examples: state.emailExamples.map((e) => ({
             label: e.label,
             content: e.content,
           })),
         });
-        setDraft(res);
+        setDraft({ ...res, body: withSignature(res.body, state.company) });
       } else {
         // Demo mode: no AI — fill a basic template from the first sample.
         const base = state.emailExamples[0]?.content ?? "Hi {{name}},\n\n";
         const body =
           base.replace(/\{\{name\}\}/g, client.name || client.company) +
           (context ? `\n\nNotes from our conversation:\n${context}` : "");
-        setDraft({ subject: `Following up — ${client.company}`, body });
+        setDraft({
+          subject: `Following up — ${client.company}`,
+          body: withSignature(body, state.company),
+        });
         setError(
           "Demo mode produced a template. Connect Supabase + add an Anthropic key for AI-written drafts."
         );

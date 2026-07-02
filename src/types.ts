@@ -178,6 +178,15 @@ export interface CuratorIntegrationConfig {
   apiKey: string;
 }
 
+/** Company branding used on invoices, documents and email sign-offs. */
+export interface CompanyInfo {
+  name: string;
+  phone: string;
+  email: string;
+  /** Header/letterhead image as a data URL (or "" if none uploaded). */
+  letterhead: string;
+}
+
 /** A folder/section id for the internal document vault (admin-customizable). */
 export type InternalDocFolder = string;
 
@@ -213,7 +222,8 @@ export type SectionKey =
   | "documents"
   | "curator"
   | "quo"
-  | "team";
+  | "team"
+  | "settings";
 
 /** Access level. 'admin' has full access and can manage the team. */
 export type EmployeeRole = "admin" | "employee";
@@ -264,6 +274,7 @@ export interface AppState {
   roles: Role[];
   calls: CallRecord[];
   emailExamples: EmailExample[];
+  company: CompanyInfo;
   quo: QuoIntegrationConfig;
   curator: CuratorIntegrationConfig;
 }

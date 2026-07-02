@@ -4,6 +4,7 @@ import type {
   Client,
   ClientDocument,
   CallRecord,
+  CompanyInfo,
   CuratorIntegrationConfig,
   DocFolder,
   EmailExample,
@@ -56,4 +57,5 @@ export type Action =
   | { type: "SET_EMAIL_EXAMPLES"; examples: EmailExample[] }
   | { type: "SET_QUO"; config: QuoIntegrationConfig }
   | { type: "SET_CURATOR"; config: CuratorIntegrationConfig }
+  | { type: "SET_COMPANY"; company: CompanyInfo }
   | { type: "RESET" };

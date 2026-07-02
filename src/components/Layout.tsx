@@ -13,6 +13,7 @@ import {
   Sparkles,
   PhoneCall,
   Users,
+  Settings as SettingsIcon,
   LogOut,
   Menu,
   X,
@@ -48,6 +49,7 @@ const navItems: NavEntry[] = [
   { to: "/quo", label: "QUO (Leads)", icon: PhoneCall, section: "quo" },
   { type: "heading", label: "Administration" },
   { to: "/team", label: "Team & Monitoring", icon: Users, section: "team" },
+  { to: "/settings", label: "Settings", icon: SettingsIcon, section: "settings" },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

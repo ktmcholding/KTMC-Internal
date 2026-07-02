@@ -18,6 +18,13 @@ const defaultCurator: AppState["curator"] = {
   apiKey: "",
 };
 
+const defaultCompany: AppState["company"] = {
+  name: "KTMC",
+  phone: "",
+  email: "Sales@ktmcholdings.com",
+  letterhead: "",
+};
+
 /** An empty workspace (used in Supabase mode before/without data). */
 export function emptyState(): AppState {
   return {
@@ -34,6 +41,7 @@ export function emptyState(): AppState {
     roles: [],
     calls: [],
     emailExamples: [],
+    company: { ...defaultCompany },
     quo: { ...defaultQuo },
     curator: { ...defaultCurator },
   };
@@ -275,6 +283,7 @@ export const seedState: AppState = {
       permissions: ["formulation", "co-packing", "private-white-label", "our-brands", "software"],
     },
   ],
+  company: { ...defaultCompany },
   quo: {
     connected: false,
     phoneNumber: "",

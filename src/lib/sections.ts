@@ -22,6 +22,7 @@ export const SECTIONS: SectionDef[] = [
   { key: "curator", label: "Curator" },
   { key: "quo", label: "QUO (Leads)" },
   { key: "team", label: "Team & Monitoring", adminOnly: true },
+  { key: "settings", label: "Settings", adminOnly: true },
 ];
 
 /** Sections an admin can grant/revoke for an individual employee. */

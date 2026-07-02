@@ -294,6 +294,7 @@ export async function fetchAll(): Promise<AppState> {
     calls: (callsRes.data ?? []).map((r) => toCall(r as Row)),
     emailExamples:
       (settingsMap.get("email_examples") as EmailExample[] | undefined) ?? [],
+    company: { ...base.company, ...((settingsMap.get("company") as object) ?? {}) },
     quo: { ...base.quo, ...((settingsMap.get("quo") as object) ?? {}) },
     curator: {
       ...base.curator,
@@ -469,6 +470,7 @@ export interface DraftEmailInput {
   clientName: string;
   context: string; // recent calls/notes summarising the conversation
   instruction: string; // what the email should achieve
+  signature?: string; // required KTMC sign-off the email must end with
   examples: { label: string; content: string }[]; // style samples
 }
 
@@ -731,6 +733,11 @@ export async function persist(action: Action): Promise<void> {
     case "SET_CURATOR":
       await throwOn(
         sb.from("settings").upsert({ key: "curator", value: action.config }, { onConflict: "key" })
+      );
+      return;
+    case "SET_COMPANY":
+      await throwOn(
+        sb.from("settings").upsert({ key: "company", value: action.company }, { onConflict: "key" })
       );
       return;
 

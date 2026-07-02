@@ -11,6 +11,7 @@ import { Curator } from "./pages/Curator";
 import { QuoIntegration } from "./pages/QuoIntegration";
 import { InternalDocuments } from "./pages/InternalDocuments";
 import { Team } from "./pages/Team";
+import { Settings } from "./pages/Settings";
 import { type ReactNode } from "react";
 import type { SectionKey } from "./types";
 
@@ -109,6 +110,14 @@ export default function App() {
         element={
           <RequireAuth section="team">
             <Team />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth section="settings">
+            <Settings />
           </RequireAuth>
         }
       />

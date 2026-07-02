@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Plus, Trash2, FileText, Download } from "lucide-react";
 import type { CategoryId, Invoice, InvoiceLineItem, InvoiceStatus } from "../../types";
 import { useStore } from "../../store/AppStore";
 import { StatCard } from "../../components/StatCard";
 import { Modal } from "../../components/Modal";
 import { formatCurrency, formatDate, uid } from "../../lib/format";
+import { openInvoicePdf } from "../../lib/invoicePdf";
 
 function invoiceTotal(inv: Invoice): number {
   return inv.lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0);
 }
 
 export function InvoicesSection({ category }: { category: CategoryId }) {
-  const { invoicesByCategory, clientsByCategory, clientName, dispatch } = useStore();
+  const { state, invoicesByCategory, clientsByCategory, clientName, dispatch } =
+    useStore();
   const invoices = invoicesByCategory(category);
   const clients = clientsByCategory(category);
   const [showCreate, setShowCreate] = useState(false);
@@ -104,15 +106,30 @@ export function InvoicesSection({ category }: { category: CategoryId }) {
                       {formatCurrency(invoiceTotal(inv))}
                     </td>
                     <td className="px-5 py-2.5 text-right">
-                      <button
-                        className="text-gray-400 hover:text-red-500"
-                        onClick={() =>
-                          dispatch({ type: "DELETE_INVOICE", id: inv.id })
-                        }
-                        aria-label="Delete invoice"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+                          onClick={() =>
+                            openInvoicePdf(
+                              inv,
+                              clients.find((c) => c.id === inv.clientId),
+                              state.company
+                            )
+                          }
+                          aria-label="Download invoice PDF"
+                        >
+                          <Download size={14} /> PDF
+                        </button>
+                        <button
+                          className="text-gray-400 hover:text-red-500"
+                          onClick={() =>
+                            dispatch({ type: "DELETE_INVOICE", id: inv.id })
+                          }
+                          aria-label="Delete invoice"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
